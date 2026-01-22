@@ -19,6 +19,7 @@ export interface AnalysisResult {
     movingAverages?: string;
   };
   summary: string;
+  suggestedDuration: string; // New field for 5s, 15s, 1m
 }
 
 export interface MarketData {

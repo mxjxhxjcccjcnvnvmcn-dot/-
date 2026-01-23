@@ -6,52 +6,36 @@ const API_KEY = process.env.API_KEY || "";
 
 const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
-// Helper to play audio directly from service
-export const playBase64Audio = async (base64Audio: string) => {
-  try {
-    const audioContext = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 24000 });
-    
-    const binaryString = atob(base64Audio);
-    const len = binaryString.length;
-    const bytes = new Uint8Array(len);
-    for (let i = 0; i < len; i++) {
-      bytes[i] = binaryString.charCodeAt(i);
-    }
+// New constant for specific error
+export const API_QUOTA_ERROR = "QUOTA_EXCEEDED";
 
-    const dataInt16 = new Int16Array(bytes.buffer);
-    const numChannels = 1;
-    const frameCount = dataInt16.length / numChannels;
-    const audioBuffer = audioContext.createBuffer(numChannels, frameCount, 24000);
-    
-    for (let channel = 0; channel < numChannels; channel++) {
-        const channelData = audioBuffer.getChannelData(channel);
-        for (let i = 0; i < frameCount; i++) {
-            channelData[i] = dataInt16[i * numChannels + channel] / 32768.0;
-        }
-    }
-
-    const source = audioContext.createBufferSource();
-    source.buffer = audioBuffer;
-    source.connect(audioContext.destination);
-    source.start();
-  } catch (e) {
-    console.error("Audio playback error:", e);
-  }
-};
-
+// --- Chart Analysis ---
 export const analyzeChartImage = async (base64Image: string, userContext?: string): Promise<AnalysisResult> => {
   const ai = new GoogleGenAI({ apiKey: API_KEY });
   
-  // Optimized Prompt: Handles specific questions, Arabic summary, and Trade Duration
+  // Enhanced prompt for highly detailed technical analysis
   const prompt = `
-    Analyze this trading chart image.
-    1. Check if valid chart. If not, set isValidChart=false.
-    2. If valid, set isValidChart=true and provide recommendation (BUY, SELL, HOLD).
-    3. Determine best 'suggestedDuration' for a quick trade strictly from: ["5s", "15s", "1m"] based on volatility.
-    4. 'summary' field MUST be in ARABIC.
-       - If user provides a note/question ("${userContext || ''}"), answer it directly in the 'summary' (max 30 words).
-       - If no note, keep 'summary' extremely short describing the trend (max 10 words).
-    5. Fill other fields briefly.
+    Analyze this financial chart with the precision of a professional technical analyst.
+    
+    REQUIRED ANALYSIS COMPONENTS:
+    1. Support & Resistance: Identify at least 2-3 significant horizontal or dynamic levels.
+    2. RSI (Relative Strength Index): Analyze current value, overbought/oversold conditions, or divergences.
+    3. MACD: Look for crossovers, histogram momentum, and signal line position.
+    4. Moving Averages: Identify the trend based on major MAs (e.g., 20, 50, 200) and any crossovers (Golden/Death cross).
+    5. Price Action: Identify key candlestick patterns (Hammer, Engulfing, etc.) and market structure (Higher Highs/Lower Lows).
+
+    Based on the chart:
+    - isValidChart: Is this a recognizable trading chart? (boolean)
+    - recommendation: BUY, SELL, or HOLD.
+    - suggestedDuration: Optimal trade horizon ("5s", "15s", "1m").
+    - confidence: A score from 0.0 to 1.0 representing your certainty.
+    - reasoning: List specific technical reasons for your recommendation.
+    - supportLevels: Specific price levels or zones of support.
+    - resistanceLevels: Specific price levels or zones of resistance.
+    - indicators: Detailed summary of RSI, MACD, and Moving Averages signals.
+    - summary: A concise technical summary in ARABIC (max 60 words).
+    
+    ${userContext ? `Special Focus/Context from User: ${userContext}` : ''}
   `;
 
   let lastError: any;
@@ -68,7 +52,9 @@ export const analyzeChartImage = async (base64Image: string, userContext?: strin
           ]
         },
         config: {
-          temperature: 0.7, 
+          temperature: 0.4, // Lower temperature for more consistent technical analysis
+          maxOutputTokens: 1200,
+          thinkingConfig: { thinkingBudget: 200 },
           responseMimeType: "application/json",
           responseSchema: {
             type: Type.OBJECT,
@@ -85,13 +71,13 @@ export const analyzeChartImage = async (base64Image: string, userContext?: strin
               indicators: {
                 type: Type.OBJECT,
                 properties: {
-                  rsi: { type: Type.STRING },
-                  macd: { type: Type.STRING },
-                  movingAverages: { type: Type.STRING }
+                  rsi: { type: Type.STRING, description: "Detailed RSI analysis" },
+                  macd: { type: Type.STRING, description: "Detailed MACD analysis" },
+                  movingAverages: { type: Type.STRING, description: "Detailed Moving Averages analysis" }
                 }
               }
             },
-            required: ["isValidChart", "recommendation", "confidence", "summary", "suggestedDuration"]
+            required: ["isValidChart", "recommendation", "confidence", "summary", "suggestedDuration", "supportLevels", "resistanceLevels", "indicators"]
           }
         }
       });
@@ -115,26 +101,78 @@ export const analyzeChartImage = async (base64Image: string, userContext?: strin
   throw new Error("فشل التحليل. حاول مرة أخرى.");
 };
 
-export const generateVoiceGuidance = async (text: string): Promise<string> => {
+// --- Chat & Voice Functions (Kept as is for other features) ---
+export type DialectType = 'sudanese' | 'saudi' | 'syrian' | 'algerian' | 'tunisian';
+
+const DIALECT_PROMPTS: Record<DialectType, string> = {
+  sudanese: "تحدث باللهجة السودانية (يا زول، كيفك).",
+  saudi: "تحدث باللهجة السعودية (هلا والله).",
+  syrian: "تحدث باللهجة الشامية (يا هلا).",
+  algerian: "تحدث باللهجة الجزائرية.",
+  tunisian: "تحدث باللهجة التونسية.",
+};
+
+export const getAIResponse = async (
+  history: { role: string; parts: { text: string }[] }[],
+  userText: string,
+  dialect: DialectType
+): Promise<string> => {
   const ai = new GoogleGenAI({ apiKey: API_KEY });
-  
+  const systemInstruction = `أنت "مازن"، مساعد مالي ذكي. ${DIALECT_PROMPTS[dialect]} ردودك يجب أن تكون قصيرة جداً وسريعة.`;
+
+  try {
+    const response = await ai.models.generateContent({
+      model: "gemini-3-flash-preview",
+      contents: [...history, { role: 'user', parts: [{ text: userText }] }] as any,
+      config: { systemInstruction, temperature: 0.7, maxOutputTokens: 60 }
+    });
+    return response.text || "عذراً، لم أسمعك جيداً.";
+  } catch (error: any) {
+    if (error.code === 429) return API_QUOTA_ERROR;
+    return "حدث خطأ في الاتصال.";
+  }
+};
+
+export const generateVoiceGuidance = async (text: string, voiceName: string = 'Fenrir'): Promise<string | null> => {
+  const ai = new GoogleGenAI({ apiKey: API_KEY });
   try {
     const response = await ai.models.generateContent({
       model: "gemini-2.5-flash-preview-tts",
       contents: [{ parts: [{ text: text }] }],
       config: {
         responseModalities: [Modality.AUDIO],
-        speechConfig: {
-          voiceConfig: {
-            prebuiltVoiceConfig: { voiceName: 'Kore' }, 
-          },
-        },
+        speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: voiceName as any } } },
       },
     });
+    return response.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data || null;
+  } catch (error: any) {
+    if (error.code === 429) return API_QUOTA_ERROR;
+    return null;
+  }
+};
 
-    return response.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data || "";
+export const playBase64Audio = async (base64String: string): Promise<void> => {
+  const AudioContext = window.AudioContext || (window as any).webkitAudioContext;
+  if (!AudioContext) return;
+  const audioContext = new AudioContext();
+  try {
+    const binaryString = atob(base64String);
+    const validLen = binaryString.length - (binaryString.length % 2);
+    const bytes = new Uint8Array(validLen);
+    for (let i = 0; i < validLen; i++) bytes[i] = binaryString.charCodeAt(i);
+    const pcmData = new Int16Array(bytes.buffer);
+    const sampleRate = 24000;
+    const buffer = audioContext.createBuffer(1, pcmData.length, sampleRate);
+    const channelData = buffer.getChannelData(0);
+    for (let i = 0; i < pcmData.length; i++) channelData[i] = pcmData[i] / 32768.0;
+    const source = audioContext.createBufferSource();
+    source.buffer = buffer;
+    source.connect(audioContext.destination);
+    source.start(0);
+    return new Promise((resolve) => {
+      source.onended = () => { resolve(); audioContext.close(); };
+    });
   } catch (error) {
-    console.error("TTS generation error:", error);
-    return "";
+    audioContext.close();
   }
 };

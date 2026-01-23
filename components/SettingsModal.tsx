@@ -11,6 +11,8 @@ interface SettingsModalProps {
   onClose: () => void;
   config: ThemeConfig;
   onUpdate: (key: keyof ThemeConfig, value: any) => void;
+  isVoiceCallEnabled: boolean; // New prop
+  onToggleVoiceCall: (enabled: boolean) => void; // New prop
 }
 
 export const GRADIENTS = [
@@ -40,7 +42,7 @@ export const GRADIENTS = [
   }
 ];
 
-const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, config, onUpdate }) => {
+const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, config, onUpdate, isVoiceCallEnabled, onToggleVoiceCall }) => {
   if (!isOpen) return null;
 
   return (
@@ -112,6 +114,27 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, config, 
               ))}
             </div>
           </div>
+
+          {/* Voice Call Feature Toggle */}
+          <div>
+            <div className="flex items-center justify-between mb-3 border-t border-white/10 pt-6 mt-6">
+              <label htmlFor="voiceCallToggle" className="text-sm font-bold text-indigo-200">مكالمات المساعد الصوتي</label>
+              <label className="relative inline-flex items-center cursor-pointer">
+                <input 
+                  type="checkbox" 
+                  id="voiceCallToggle"
+                  className="sr-only peer" 
+                  checked={isVoiceCallEnabled} 
+                  onChange={(e) => onToggleVoiceCall(e.target.checked)} 
+                />
+                <div className="w-11 h-6 bg-slate-700 rounded-full peer peer-focus:ring-2 peer-focus:ring-indigo-500 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:right-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-600"></div>
+              </label>
+            </div>
+            <p className="text-xs text-slate-400 mt-1">
+              تفعيل/تعطيل زر الاتصال الصوتي مع المساعد "مازن" في شريط التنقل العلوي.
+            </p>
+          </div>
+
         </div>
 
         <div className="mt-8 pt-6 border-t border-white/10">

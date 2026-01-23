@@ -3,9 +3,11 @@ import React from 'react';
 
 interface HeaderProps {
   onOpenSettings?: () => void;
+  onOpenVoiceCall?: () => void; // New prop for opening voice call modal
+  isVoiceCallEnabled?: boolean; // New prop to control visibility of voice call button
 }
 
-const Header: React.FC<HeaderProps> = ({ onOpenSettings }) => {
+const Header: React.FC<HeaderProps> = ({ onOpenSettings, onOpenVoiceCall, isVoiceCallEnabled }) => {
   return (
     <div className="fixed top-4 left-0 right-0 z-50 flex justify-center px-4">
       <header className="glass-panel rounded-full px-6 py-3 flex justify-between items-center w-full max-w-5xl shadow-[0_8px_32px_rgba(0,0,0,0.2)]">
@@ -24,8 +26,19 @@ const Header: React.FC<HeaderProps> = ({ onOpenSettings }) => {
         <div className="flex items-center gap-3">
           <nav className="hidden sm:flex gap-1 bg-white/5 rounded-full p-1 border border-white/5">
             <a href="#" className="px-4 py-1.5 rounded-full text-sm font-medium text-white bg-white/10 shadow-sm border border-white/5 transition-all">الرئيسية</a>
-            <a href="#" className="px-4 py-1.5 rounded-full text-sm font-medium text-slate-400 hover:text-white transition-colors">عن التطبيق</a>
           </nav>
+
+          {isVoiceCallEnabled && onOpenVoiceCall && (
+            <button 
+              onClick={onOpenVoiceCall}
+              className="w-10 h-10 rounded-full bg-indigo-600 hover:bg-indigo-500 text-white shadow-lg shadow-indigo-600/30 flex items-center justify-center transition-all hover:scale-105 active:scale-95 group"
+              title="مكالمة صوتية مع مازن"
+            >
+              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
+              </svg>
+            </button>
+          )}
 
           {onOpenSettings && (
             <button 

@@ -14,6 +14,7 @@ import DeveloperStory from './components/DeveloperStory';
 import { UserProfileData, HistoryEntry, AnalysisResult } from './types';
 
 const App: React.FC = () => {
+  const [hasKey, setHasKey] = useState<boolean>(true);
   const [isPlanActivated, setIsPlanActivated] = useState(false);
   const [activatedPlanTitle, setActivatedPlanTitle] = useState<string | null>(null);
   const [remainingQuota, setRemainingQuota] = useState<number | null>(null);
@@ -36,6 +37,24 @@ const App: React.FC = () => {
     const saved = localStorage.getItem('user_profile_v1');
     return saved ? JSON.parse(saved) : { favorites: [], watchlists: [], history: [] };
   });
+
+  // Check for API Key on mount
+  useEffect(() => {
+    const checkKey = async () => {
+      if (window.aistudio && typeof window.aistudio.hasSelectedApiKey === 'function') {
+        const keyExists = await window.aistudio.hasSelectedApiKey();
+        setHasKey(keyExists);
+      }
+    };
+    checkKey();
+  }, []);
+
+  const handleSelectKey = async () => {
+    if (window.aistudio && typeof window.aistudio.openSelectKey === 'function') {
+      await window.aistudio.openSelectKey();
+      setHasKey(true); // Proceed assuming success per race condition rule
+    }
+  };
 
   useEffect(() => {
     localStorage.setItem('user_profile_v1', JSON.stringify(profile));
@@ -125,6 +144,36 @@ const App: React.FC = () => {
       history: [entry, ...prev.history].slice(0, 50)
     }));
   };
+
+  // Render Key Picker Gate if no key
+  if (!hasKey) {
+    return (
+      <div className="min-h-screen bg-[#020205] flex items-center justify-center p-6 text-right" dir="rtl">
+        <div className="glass-panel-heavy p-12 rounded-[4rem] max-w-xl w-full text-center space-y-8 animate-in zoom-in duration-700 shadow-2xl border-white/10">
+          <div className="w-24 h-24 bg-indigo-600/20 border border-indigo-500/30 rounded-3xl flex items-center justify-center mx-auto text-6xl animate-pulse">
+            🤖
+          </div>
+          <div className="space-y-4">
+            <h2 className="text-4xl font-black text-white">تجهيز محرك الذكاء</h2>
+            <p className="text-slate-400 text-lg leading-relaxed">
+              لضمان عمل التحليلات الفنية بدقة على منصة Vercel، يرجى ربط حسابك بـ Google AI Studio.
+            </p>
+          </div>
+          <div className="bg-white/5 p-6 rounded-3xl border border-white/10 text-xs text-slate-500 space-y-3">
+             <p>• سيتم استخدام مفتاح الـ API الخاص بك محلياً فقط.</p>
+             <p>• تأكد من اختيار مشروع مدفوع لتفعيل الميزات المتقدمة.</p>
+             <a href="https://ai.google.dev/gemini-api/docs/billing" target="_blank" rel="noreferrer" className="text-indigo-400 font-bold hover:underline block pt-2">عرض وثائق الفوترة والدعم</a>
+          </div>
+          <button 
+            onClick={handleSelectKey}
+            className="w-full py-6 bg-indigo-600 text-white font-black rounded-2xl text-2xl hover:bg-indigo-500 transition-all shadow-xl shadow-indigo-600/20 active:scale-95"
+          >
+            ربط المحرك الآن
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen flex flex-col font-tajawal relative w-full overflow-x-hidden">

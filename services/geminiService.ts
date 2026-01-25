@@ -2,15 +2,15 @@
 import { GoogleGenAI, Type } from "@google/genai";
 import { AnalysisResult, SignalType } from "../types";
 
-const getAIClient = () => {
+// Create client right before use to ensure it has the latest key from context/dialog
+const createAI = () => {
   return new GoogleGenAI({ apiKey: process.env.API_KEY as string });
 };
 
 export const analyzeChartImage = async (base64Image: string): Promise<AnalysisResult> => {
   try {
-    const ai = getAIClient();
+    const ai = createAI();
     
-    // محرك التحليل الفني السريع - الالتزام الكامل بالقواعد الفنية مع سرعة معالجة عالية
     const prompt = `
       You are a HIGH-SPEED PROFESSIONAL STOCK TECHNICAL ANALYSIS ENGINE.
       
@@ -40,7 +40,7 @@ export const analyzeChartImage = async (base64Image: string): Promise<AnalysisRe
     `;
 
     const response = await ai.models.generateContent({
-      model: 'gemini-3-flash-preview', // استخدام موديل فلاش للسرعة القصوى
+      model: 'gemini-3-flash-preview',
       contents: {
         parts: [
           { inlineData: { mimeType: 'image/jpeg', data: base64Image } },
@@ -49,7 +49,7 @@ export const analyzeChartImage = async (base64Image: string): Promise<AnalysisRe
       },
       config: {
         responseMimeType: 'application/json',
-        thinkingConfig: { thinkingBudget: 0 }, // تعطيل التفكير لتقليل زمن الاستجابة (Latency)
+        thinkingConfig: { thinkingBudget: 0 },
         responseSchema: {
           type: Type.OBJECT,
           properties: {
@@ -89,15 +89,19 @@ export const analyzeChartImage = async (base64Image: string): Promise<AnalysisRe
       },
       suggestedDuration: result.risk_level
     };
-  } catch (error) {
+  } catch (error: any) {
     console.error("Technical Analysis Engine Error:", error);
+    // Handle the case where the entity was not found (invalid/revoked key)
+    if (error.message?.includes("Requested entity was not found")) {
+      window.location.reload(); // Refresh to trigger key picker gate again
+    }
     throw error;
   }
 };
 
 export const verifySubscriptionScreenshot = async (base64Image: string): Promise<boolean> => {
   try {
-    const ai = getAIClient();
+    const ai = createAI();
     const response = await ai.models.generateContent({
       model: 'gemini-3-flash-preview',
       contents: {
@@ -123,7 +127,7 @@ export const getAIResponse = async (history: any[], text: string, dialect: Diale
     syrian: "أنت مازن، خبير أسهم سوري. رد بلهجة شامية مهذبة سريعة."
   };
   try {
-    const ai = getAIClient();
+    const ai = createAI();
     const response = await ai.models.generateContent({
       model: "gemini-3-flash-preview",
       contents: text,

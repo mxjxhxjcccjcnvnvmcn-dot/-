@@ -1,6 +1,12 @@
 
 import React, { useState, useEffect } from 'react';
 
+export interface PlanTheme {
+  glowColor: string;
+  color: string;
+  bgGradient: string;
+}
+
 interface PlanProps {
   title: string;
   price: string;
@@ -9,357 +15,368 @@ interface PlanProps {
   color: string;
   glowColor: string;
   badge?: string;
-  icon: React.ReactNode;
   quota: string;
+  icon: string;
+  isPopular?: boolean;
+  tier: 'gift' | 'silver' | 'gold' | 'platinum';
+  bgGradient: string;
 }
 
-// أكواد تفعيل الباقة الفضية
-export const SILVER_CODES = [
-  "#S1@48$7!", "#SV@92&3?", "#S!5@0$6#", "#S8&@14$!", "#SL#67@9!", 
-  "#S@3$8&2!", "#S1#9@5$!", "#S@46!#8$", "#S$7@1!9#", "#S@0#5$6!"
+const PLANS_DATA: PlanProps[] = [
+  {
+    tier: 'gift',
+    title: 'هدية المنصة', price: 'مجاناً', period: 'للأوائل', quota: '20 صورة', badge: 'تسجيل مسبق', glowColor: '#ffd700', icon: '🎁',
+    color: 'from-amber-400/20 to-indigo-900/20',
+    bgGradient: 'radial-gradient(at 0% 0%, #450a0a 0, transparent 50%), radial-gradient(at 100% 100%, #1e1b4b 0, transparent 50%), #020205',
+    features: ['مخصصة لأول 250 مسجل', '20 تحليل فني عالي الدقة', 'صلاحية مفتوحة لأول يوم']
+  },
+  {
+    tier: 'silver',
+    title: 'فضي', price: '13,000', period: 'يوم', quota: '25 صورة / يوم', glowColor: '#94a3b8', icon: '🥈',
+    color: 'from-slate-500/20 to-slate-900/20',
+    bgGradient: 'radial-gradient(at 0% 0%, #1e293b 0, transparent 50%), radial-gradient(at 100% 100%, #334155 0, transparent 50%), #020205',
+    features: ['25 تحليل فني يومياً', 'إشارات الدخول والخروج', 'دعم العملات الرقمية والأسهم']
+  },
+  {
+    tier: 'gold',
+    title: 'ذهبي', price: '55,000', period: 'أسبوع', quota: '150 صورة', badge: 'الأكثر مبيعاً', isPopular: true, glowColor: '#fbbf24', icon: '🥇',
+    color: 'from-amber-500/20 to-amber-900/20',
+    bgGradient: 'radial-gradient(at 0% 0%, #451a03 0, transparent 50%), radial-gradient(at 100% 100%, #78350f 0, transparent 50%), #020205',
+    features: ['150 تحليل شامل', 'استراتيجيات قنص الصفقات', 'كشف مناطق التجميع والتصريف']
+  },
+  {
+    tier: 'platinum',
+    title: 'بلاتيني', price: '120,000', period: 'شهر', quota: '450 صورة', badge: 'VIP', glowColor: '#818cf8', icon: '💎',
+    color: 'from-indigo-500/20 to-indigo-900/20',
+    bgGradient: 'radial-gradient(at 0% 0%, #1e1b4b 0, transparent 50%), radial-gradient(at 100% 100%, #312e81 0, transparent 50%), #020205',
+    features: ['450 تحليل (سقف عالي)', 'أولوية قصوى في السيرفرات', 'توصيات خاصة وحصرية']
+  }
 ];
 
-// أكواد تفعيل الباقة الذهبية
-export const GOLD_CODES = [
-  "#G1@9$7!", "#GD@45&8!", "#G!8@2$6#", "#GOLD@9$1!", "#G7&@3$!", 
-  "#G@56!#8$", "#G9$@1!#", "#G@0#7$6!", "#G!4@9$#", "#G8@2$!#"
-];
+const PlanCard: React.FC<PlanProps & { onSelect?: () => void; isActive?: boolean; isUsed?: boolean }> = ({ 
+  title, price, features, glowColor, badge, icon, onSelect, quota, isActive, tier, isUsed
+}) => {
+  const getGlowClass = () => {
+    if (tier === 'gift') return 'animate-royal-glow border-white/40 scale-[1.05] z-10';
+    if (tier === 'platinum') return 'animate-liquid-glow-platinum';
+    if (tier === 'gold') return 'animate-gold-halo';
+    return 'animate-silver-pulse-glow';
+  };
 
-// أكواد تفعيل الباقة البلاتينية
-export const PLATINUM_CODES = [
-  "#P1@9$7!", "#PL@4&8$!", "#P!8@2$6#", "#PLT@9$1!", "#P7&@3$!", 
-  "#P@56!#8$", "#P9$@1!#", "#P@0#7$6!", "#P!4@9$#", "#P8@2$!#"
-];
-
-const SilverIcon = () => (
-  <svg className="w-8 h-8" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-1.006 3.502 3.502 0 014.438 0 3.42 3.42 0 001.946 1.006 3.502 3.502 0 012.743 2.743 3.42 3.42 0 001.006 1.946 3.502 3.502 0 010 4.438 3.42 3.42 0 00-1.006 1.946 3.502 3.502 0 01-2.743 2.743 3.42 3.42 0 00-1.946 1.006 3.502 3.502 0 01-4.438 0 3.42 3.42 0 00-1.946-1.006 3.502 3.502 0 01-2.743-2.743z" />
-  </svg>
-);
-
-const GoldIcon = () => (
-  <svg className="w-8 h-8" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-7.714 2.143L11 21l-2.286-6.857L1 12l7.714-2.143L11 3z" />
-  </svg>
-);
-
-const PlatinumIcon = () => (
-  <svg className="w-10 h-10" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.2} d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" />
-    <circle cx="12" cy="12" r="3" strokeWidth={1.5} className="animate-pulse" />
-  </svg>
-);
-
-const BankakLogo = () => (
-  <div className="flex flex-col items-center justify-center scale-110">
-    <div className="relative group">
-       <div className="absolute inset-0 bg-red-600 blur-2xl opacity-20 group-hover:opacity-40 transition-opacity"></div>
-       <div className="relative bg-[#c1272d] rounded-2xl p-4 shadow-2xl border border-white/10 flex flex-col items-center gap-1">
-          <div className="text-white text-3xl font-black tracking-tighter flex items-center">
-            <span>ب</span>
-            <span className="text-[#d4af37]">ـ</span>
-            <span>نـكك</span>
-            <div className="ml-1 mb-2">
-                <svg className="w-6 h-6 text-[#d4af37]" viewBox="0 0 24 24" fill="currentColor">
-                    <path d="M16 8c0-1.1-.9-2-2-2s-2 .9-2 2 .9 2 2 2 2-.9 2-2zM4 12c0-4.4 3.6-8 8-8s8 3.6 8 8-3.6 8-8 8-8-3.6-8-8zm8 6c3.3 0 6-2.7 6-6s-2.7-6-6-6-6 2.7-6 6 2.7 6 6 6z"/>
-                </svg>
-            </div>
-          </div>
-          <div className="text-white text-xs font-black tracking-[0.3em] uppercase opacity-90">bankak</div>
-       </div>
-    </div>
-  </div>
-);
-
-const PlanCard: React.FC<PlanProps & { onSelect?: () => void, isActive?: boolean, isFree?: boolean }> = ({ title, price, period, features, color, glowColor, badge, icon, onSelect, quota, isActive, isFree }) => {
   return (
     <div 
-      className={`glass-panel-heavy rounded-[3rem] p-10 flex flex-col relative group transition-all duration-700 ${!isActive ? 'hover:-translate-y-4' : 'border-indigo-500/50 shadow-[0_0_50px_rgba(99,102,241,0.2)]'} border-t border-white/10 overflow-visible h-full`}
-      style={{ '--hover-glow': glowColor } as any}
+      className={`rounded-[3.5rem] p-10 flex flex-col relative group cursor-pointer transition-all duration-700 overflow-hidden border ${isActive ? 'scale-95 border-white' : 'border-white/10 hover:border-white/40'} ${getGlowClass()} ${isUsed ? 'opacity-50 grayscale' : ''}`}
+      onClick={(isActive || isUsed) ? undefined : onSelect}
+      style={{ 
+        background: isActive ? '#000' : 'linear-gradient(160deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0.01) 100%)'
+      }}
     >
-      <div 
-        className={`absolute -inset-4 rounded-[3.5rem] ${isActive ? 'opacity-40' : 'opacity-0 group-hover:opacity-100'} transition-opacity duration-1000 blur-[60px] z-[-1]`}
-        style={{ background: `radial-gradient(circle at 50% 50%, ${glowColor}55 0%, transparent 70%)` }}
-      />
+      <div className="absolute inset-0 bg-gradient-to-br from-white/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none"></div>
+      
       {badge && (
-        <div className="absolute -top-5 right-10 bg-gradient-to-r from-amber-400 to-orange-500 text-black text-[10px] font-black px-5 py-2 rounded-full shadow-[0_0_30px_rgba(245,158,11,0.5)] z-20 uppercase tracking-[0.2em] animate-bounce">
-          {badge}
+        <div className={`absolute top-8 left-8 px-6 py-2 rounded-full text-[10px] font-black uppercase tracking-widest z-20 flex items-center gap-2 shadow-lg ${tier === 'gift' ? 'bg-gradient-to-r from-red-600 via-blue-600 to-white text-black' : ''}`} style={tier === 'gift' ? {} : { background: glowColor, color: '#fff' }}>
+           {badge}
         </div>
       )}
-      <div 
-        className={`w-20 h-20 rounded-[2rem] mb-8 flex items-center justify-center shadow-2xl border transition-all duration-500 ${isActive ? 'scale-110' : 'group-hover:scale-110 group-hover:rotate-3'} ${color}`}
-        style={{ boxShadow: `0 0 40px ${glowColor}33` }}
-      >
+      
+      <div className={`w-28 h-28 rounded-[3rem] mb-10 flex items-center justify-center text-6xl border border-white/10 relative z-10 bg-white/5 shadow-inner ${tier === 'gift' ? 'gold-center-icon' : ''}`}>
         {icon}
       </div>
-      <div className="mb-2">
-        <h3 className="text-3xl font-black text-white tracking-tight">{title}</h3>
-        <div className="text-[10px] font-black uppercase tracking-[0.2em] mt-1 opacity-70" style={{ color: glowColor }}>
-            {quota}
-        </div>
+      
+      <div className="mb-6">
+        <h3 className="text-4xl font-black text-white">{title}</h3>
+        <p className="text-sm font-black uppercase tracking-[0.25em] mt-1" style={{ color: glowColor }}>{quota}</p>
       </div>
-      <div className="flex items-baseline gap-2 mb-10">
-        <span className="text-5xl font-black text-white drop-shadow-md">{price}</span>
-        {period && <span className="text-slate-400 text-sm font-bold uppercase tracking-wider">SD / {period}</span>}
+      
+      <div className="flex items-baseline gap-3 mb-10">
+        <span className="text-xl font-bold text-slate-400">{tier === 'gift' ? '' : 'SDG'}</span>
+        <span className="text-6xl font-black text-white tracking-tighter drop-shadow-2xl">{price}</span>
       </div>
-      <div className="w-full h-px bg-gradient-to-r from-white/10 via-white/5 to-transparent mb-10" />
-      <ul className="space-y-5 mb-12 flex-1">
-        {features.map((feature, i) => (
-          <li key={i} className={`flex items-start gap-4 text-sm transition-colors duration-300 ${isActive ? 'text-white' : 'text-slate-300 group-hover:text-white'}`}>
-            <div className="mt-1 w-5 h-5 rounded-full flex items-center justify-center shrink-0 border border-white/10" style={{ backgroundColor: `${glowColor}15` }}>
-              <svg className="w-3 h-3" style={{ color: glowColor }} fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
-              </svg>
+      
+      <div className="flex-1 space-y-6 mb-12">
+        {features.map((f, i) => (
+          <div key={i} className="flex gap-4 text-base text-slate-300 font-bold group-hover:text-white transition-colors">
+            <div className="w-7 h-7 rounded-full flex items-center justify-center shrink-0 border border-white/10" style={{ background: `${glowColor}22` }}>
+              <span style={{ color: glowColor }}>✓</span>
             </div>
-            <span className="font-medium leading-tight">{feature}</span>
-          </li>
+            {f}
+          </div>
         ))}
-      </ul>
+      </div>
+      
       <button 
-        onClick={onSelect}
-        className={`w-full py-5 rounded-[1.5rem] font-black text-lg transition-all active:scale-95 group/btn shadow-2xl relative overflow-hidden`}
+        className={`w-full py-6 rounded-3xl font-black text-xl transition-all relative overflow-hidden ${isActive || isUsed ? 'bg-white/10 text-slate-500' : 'text-white hover:scale-[1.04] active:scale-95 shadow-[0_15px_30px_rgba(0,0,0,0.3)]'}`}
         style={{ 
-          background: isFree ? 'rgba(16, 185, 129, 0.1)' : title === 'فضي' ? 'rgba(255,255,255,0.1)' : `linear-gradient(135deg, ${glowColor}, ${glowColor}aa)`,
-          color: isFree ? '#10b981' : title === 'فضي' ? 'white' : 'black',
-          boxShadow: `0 20px 40px ${glowColor}33`
+          background: (isActive || isUsed) ? undefined : (tier === 'gift' ? 'linear-gradient(135deg, #ff0000, #0000ff)' : `linear-gradient(135deg, ${glowColor}, ${glowColor}dd)`)
         }}
       >
-        <span className="relative z-10">{isFree ? 'ابدأ القراءة مجاناً' : 'ابدأ الآن'}</span>
-        <div className="absolute inset-0 bg-white/20 translate-y-full group-hover/btn:translate-y-0 transition-transform duration-300" />
+        <span className="relative z-10">
+          {isActive ? 'الباقة الحالية' : isUsed ? 'تم الحجز' : (tier === 'gift' ? 'حجز مكاني الآن' : 'تفعيل الآن')}
+        </span>
       </button>
     </div>
   );
 };
 
 interface SubscriptionPlansProps {
-  onActivate?: (planTitle: string) => void;
+  onActivate: (t: string, m?: number, theme?: PlanTheme, quota?: number) => void;
   activatedPlanTitle?: string | null;
-  onOpenFreeCourse?: () => void;
 }
 
-const SubscriptionPlans: React.FC<SubscriptionPlansProps> = ({ onActivate, activatedPlanTitle, onOpenFreeCourse }) => {
-  const [selectedPlan, setSelectedPlan] = useState<any | null>(null);
-  const [step, setStep] = useState<'confirm' | 'payment' | 'activation' | 'success'>('confirm');
-  const [isProcessing, setIsProcessing] = useState(false);
+const SubscriptionPlans: React.FC<SubscriptionPlansProps> = ({ onActivate, activatedPlanTitle }) => {
+  const [selectedPlan, setSelectedPlan] = useState<PlanProps | null>(null);
+  const [step, setStep] = useState<'confirm' | 'payment' | 'activation' | 'success' | 'pre_reg' | 'pre_reg_success'>('confirm');
   const [activationCode, setActivationCode] = useState('');
-  const [activationError, setActivationError] = useState('');
+  const [userName, setUserName] = useState('');
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [isGiftUsed, setIsGiftUsed] = useState(false);
 
-  const plans = [
-    {
-      title: 'فضي',
-      price: '13,000',
-      period: 'يوم',
-      quota: '15 صورة / يوم',
-      color: 'bg-slate-800/80 text-slate-200 border-slate-700/50',
-      glowColor: '#cbd5e1',
-      features: [
-        'تحليل 15 صورة يومياً بدقة AI',
-        'توصيات تداول لحظية للعملات',
-        'دعم فني عبر الشات المباشر',
-        'دقة تحليل فني قياسية 85%'
-      ],
-      icon: <SilverIcon />
-    },
-    {
-      title: 'ذهبي',
-      price: '35,000',
-      period: 'أسبوع',
-      quota: '200 صورة / أسبوع',
-      badge: 'الأكثر اختياراً',
-      color: 'bg-amber-500/10 text-amber-500 border-amber-500/30',
-      glowColor: '#fbbf24',
-      features: [
-        'تحليل 200 صورة أسبوعياً',
-        'توصيات خاصة لكبار المستثمرين',
-        'مكالمات صوتية غير محدودة مع مازن',
-        'دقة تحليل 95% + نظام التفكير العميق',
-        'تقارير أداء ومخاطر أسبوعية'
-      ],
-      icon: <GoldIcon />
-    },
-    {
-      title: 'بلاتيني',
-      price: '120,000',
-      period: 'شهر',
-      quota: 'صور غير محدودة',
-      color: 'bg-indigo-500/10 text-indigo-400 border-indigo-500/30',
-      glowColor: '#818cf8',
-      features: [
-        'تحليلات غير محدودة بالكامل',
-        'تنبيهات VIP فورية عبر الجوال',
-        'مدير حساب خاص لاستراتيجياتك',
-        'أولوية معالجة قصوى (خوادم VIP)',
-        'دخول حصري لأدوات التنبؤ المستقبلية'
-      ],
-      icon: <PlatinumIcon />
-    }
-  ];
+  useEffect(() => {
+    setIsGiftUsed(localStorage.getItem('gift_plan_used') === 'true');
+  }, []);
 
-  const handleOpenPayment = () => {
-    setIsProcessing(true);
+  const handlePreRegSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!userName.trim()) { setError('يرجى كتابة اسمك للمتابعة'); return; }
+    
+    setLoading(true);
+    const waMessage = encodeURIComponent(`مرحباً مازن، أنا ${userName.trim()} وأرغب في الحصول على كود التفعيل المجاني لهدية المنصة.`);
+    const whatsappUrl = `https://wa.me/249116158407?text=${waMessage}`;
+
     setTimeout(() => {
-        setIsProcessing(false);
-        setStep('payment');
-    }, 1500);
+      window.open(whatsappUrl, '_blank');
+      localStorage.setItem('gift_plan_used', 'true');
+      setIsGiftUsed(true);
+      setStep('pre_reg_success');
+      setLoading(false);
+    }, 1200);
   };
 
-  const handleDoneTransfer = () => {
-    setStep('activation');
+  const handleSendToWhatsApp = () => {
+    if (!selectedPlan) return;
+    const waMessage = encodeURIComponent(`مرحباً مازن، لقد قمت للتو بتحويل مبلغ ${selectedPlan.price} SDG للحصول على الباقة ال${selectedPlan.title}. مرفق إشعار التحويل.`);
+    window.open(`https://wa.me/249116158407?text=${waMessage}`, '_blank');
   };
 
   const handleActivate = () => {
-    const codeTrimmed = activationCode.trim();
-    let isValid = false;
-    
-    if (selectedPlan.title === 'فضي' && SILVER_CODES.includes(codeTrimmed)) isValid = true;
-    else if (selectedPlan.title === 'ذهبي' && GOLD_CODES.includes(codeTrimmed)) isValid = true;
-    else if (selectedPlan.title === 'بلاتيني' && PLATINUM_CODES.includes(codeTrimmed)) isValid = true;
+    const c = activationCode.trim();
+    let planName = '';
+    let durationMinutes = 0;
+    let quota = 0;
 
-    if (isValid) {
-      setIsProcessing(true);
-      setTimeout(() => {
-        setIsProcessing(false);
-        setStep('success');
-        if (onActivate) onActivate(selectedPlan.title);
-      }, 1500);
-    } else {
-      setActivationError('رمز التأكيد غير صحيح لهذه الباقة. يرجى التأكد من الرمز المرسل إليك.');
-      setActivationCode('');
-    }
+    if (c === "#S1@48$7!") { planName = 'فضي'; durationMinutes = 24 * 60; quota = 25; }
+    else if (c === "#G1@9$7!") { planName = 'ذهبي'; durationMinutes = 7 * 24 * 60; quota = 150; }
+    else if (c === "#P1@VIP$9!") { planName = 'بلاتيني'; durationMinutes = 30 * 24 * 60; quota = 450; }
+
+    if (planName) {
+      setStep('success');
+      const planDef = PLANS_DATA.find(p => p.title === planName);
+      const theme = planDef ? { glowColor: planDef.glowColor, color: planDef.color, bgGradient: planDef.bgGradient } : undefined;
+      onActivate(planName, durationMinutes, theme, quota);
+    } else { setError('كود التفعيل غير صالح.'); }
   };
 
-  const closeModal = () => {
+  const closeOverlay = () => {
     setSelectedPlan(null);
     setStep('confirm');
-    setIsProcessing(false);
-    setActivationCode('');
-    setActivationError('');
+    setError('');
   };
 
   return (
-    <section className="py-32 relative" id="pricing">
-      <div className="container mx-auto px-6 relative z-10">
-        <div className="text-center mb-24 space-y-4">
-          <h2 className="text-5xl md:text-7xl font-black text-white tracking-tight leading-tight">ابدأ رحلة <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 to-purple-400">الاحتراف</span></h2>
-          <p className="text-slate-400 max-w-2xl mx-auto text-xl font-light leading-relaxed">باقات صممت لترتقي بتداولك إلى مستويات غير مسبوقة من الدقة والاحترافية.</p>
-        </div>
-        
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-10 max-w-7xl mx-auto items-stretch mb-20">
-          {plans.map((plan, i) => (
-            <PlanCard 
-              key={i} 
-              {...plan} 
-              onSelect={() => setSelectedPlan(plan)} 
-              isActive={activatedPlanTitle === plan.title}
-            />
-          ))}
-        </div>
+    <div id="pricing" className="space-y-16 pb-20">
+      <div className="flex justify-center flex-col items-center gap-6">
+         <div className="px-6 py-2 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 font-bold text-sm animate-pulse">
+            تبقي عدد محدود من المقاعد المجانية للأوائل
+         </div>
+         
+         <div className="flex flex-col items-center gap-4">
+            <button onClick={() => { setStep('activation'); setSelectedPlan({} as any); }} className="relative group overflow-hidden rounded-[2rem] p-[3px] transition-transform hover:scale-105 active:scale-95">
+              <span className="absolute inset-0 bg-gradient-to-r from-cyan-400 via-indigo-500 to-purple-600 animate-spin-slow"></span>
+              <div className="relative bg-[#050510] rounded-[1.8rem] px-12 py-6 flex items-center gap-5 transition-all hover:bg-black">
+                <span className="text-3xl animate-pulse">🔑</span>
+                <div className="text-right">
+                    <span className="block text-white font-black text-xl">لديك كود تفعيل؟</span>
+                    <span className="text-[10px] text-indigo-300 font-bold uppercase tracking-widest">أدخل كود التفعيل هنا</span>
+                </div>
+              </div>
+            </button>
+         </div>
+      </div>
 
-        {/* Free Course Call to Action Card */}
-        <div className="max-w-4xl mx-auto animate-in slide-in-from-bottom-8 duration-1000">
-           <PlanCard 
-              title="كورس التداول (كتاب)"
-              price="مجاني"
-              period=""
-              quota="متاح للجميع الآن"
-              badge="هدية مازن"
-              color="bg-emerald-500/10 text-emerald-400 border-emerald-500/20"
-              glowColor="#10b981"
-              isFree={true}
-              features={[
-                'مدخل شامل لسوق الفوركس والعملات',
-                'شرح مفصل لتراجعات فيبوناتشي وكيفية الرسم',
-                'تعلم استخدام المعدلات المتحركة SMA/EMA',
-                'دليل استخدام مؤشر RSI للكشف عن التشبعات',
-                'أسرار مؤشر MACD وتقاطعات الزخم'
-              ]}
-              icon={<svg className="w-10 h-10" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" /></svg>}
-              onSelect={onOpenFreeCourse}
-           />
-        </div>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 max-w-[1400px] mx-auto px-8">
+        {PLANS_DATA.map((p, i) => (
+          <PlanCard 
+            key={i} 
+            {...p} 
+            onSelect={() => { 
+              setSelectedPlan(p); 
+              if (p.tier === 'gift') setStep('pre_reg');
+              else setStep('confirm');
+            }} 
+            isActive={activatedPlanTitle === p.title}
+            isUsed={p.tier === 'gift' && isGiftUsed}
+          />
+        ))}
       </div>
 
       {selectedPlan && (
-        <div className="fixed inset-0 z-[110] flex items-center justify-center p-6 bg-black/95 backdrop-blur-2xl animate-in fade-in duration-500">
-          <div className="glass-panel-heavy p-12 rounded-[3.5rem] w-full max-w-md text-center border border-white/10 relative overflow-hidden">
-            {isProcessing ? (
-                <div className="py-20 flex flex-col items-center gap-6 animate-pulse">
-                    <BankakLogo />
-                    <div className="text-white font-black text-xl mt-4">جاري المعالجة...</div>
+        <div className="fixed inset-0 z-[150] flex items-center justify-center p-4 bg-black/95 backdrop-blur-3xl animate-in fade-in duration-500">
+          <div className="w-full h-full max-w-2xl max-h-[90vh] rounded-[3rem] shadow-2xl relative overflow-hidden flex flex-col bg-white">
+            
+            <button onClick={closeOverlay} className="absolute top-6 left-6 z-50 p-3 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-600 transition-all shadow-sm">
+              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+            </button>
+
+            {step === 'confirm' ? (
+              <div className="flex flex-col h-full">
+                {/* Bankak Red Header */}
+                <div className="bg-[#cc0000] p-10 text-center text-white space-y-2">
+                   <div className="w-20 h-20 bg-white/20 rounded-2xl flex items-center justify-center mx-auto mb-4 text-4xl">🏦</div>
+                   <h3 className="text-3xl font-black">تحويل عبر بنكك</h3>
+                   <p className="text-white/80 font-bold">بيانات حساب المستفيد المعتمدة</p>
                 </div>
-            ) : step === 'confirm' ? (
-              <>
-                <h3 className="text-3xl font-black text-white mb-4">تأكيد الترقية</h3>
-                <p className="text-slate-400 text-lg mb-10 leading-relaxed px-4">أنت على وشك الانضمام إلى النخبة في الباقة <span className="text-white font-black underline decoration-indigo-500 underline-offset-8">{selectedPlan.title}</span>.</p>
-                <div className="flex flex-col gap-4">
-                  <button onClick={handleOpenPayment} className="w-full liquid-button py-5 rounded-2xl text-white font-black text-lg hover:scale-[1.02] active:scale-95 transition-all">المتابعة للدفع الآمن</button>
-                  <button onClick={closeModal} className="w-full py-4 rounded-2xl text-slate-500 font-bold hover:text-white transition-colors">تراجع</button>
+
+                <div className="p-10 flex-1 space-y-8 overflow-y-auto">
+                   <div className="space-y-6">
+                      <div className="flex justify-between items-center p-5 bg-slate-50 rounded-2xl border border-slate-100">
+                         <span className="text-slate-500 font-bold">اسم المستفيد</span>
+                         <span className="text-slate-900 font-black text-xl">مازن حسين عثمان محمد</span>
+                      </div>
+                      <div className="flex justify-between items-center p-5 bg-slate-50 rounded-2xl border border-slate-100">
+                         <span className="text-slate-500 font-bold">رقم الحساب</span>
+                         <span className="text-[#cc0000] font-black text-3xl tracking-widest">7928440</span>
+                      </div>
+                      <div className="flex justify-between items-center p-5 bg-slate-50 rounded-2xl border border-slate-100">
+                         <span className="text-slate-500 font-bold">رقم الهاتف (للتحويل)</span>
+                         <span className="text-[#cc0000] font-black text-2xl tracking-widest">0116158407</span>
+                      </div>
+                   </div>
+
+                   <div className="bg-amber-50 p-6 rounded-2xl border border-amber-200 flex items-start gap-4">
+                      <span className="text-2xl">💡</span>
+                      <p className="text-sm text-amber-800 leading-relaxed font-bold">
+                         قم بتحويل مبلغ <span className="text-[#cc0000] text-lg px-1">{selectedPlan.price} SDG</span> ثم انتقل للخطوة التالية لمراسلتنا عبر الواتساب.
+                      </p>
+                   </div>
                 </div>
-              </>
+
+                <div className="p-8 border-t border-slate-100">
+                   <button onClick={() => setStep('payment')} className="w-full py-5 bg-[#cc0000] text-white font-black rounded-2xl text-xl hover:bg-[#aa0000] transition-all shadow-xl shadow-red-600/20 active:scale-95">
+                      التالي: إرسال الإشعار
+                   </button>
+                </div>
+              </div>
             ) : step === 'payment' ? (
-              <div className="animate-in slide-in-from-bottom-8 duration-500">
-                 <div className="mb-8"><BankakLogo /></div>
-                 <h3 className="text-2xl font-black text-white mb-2">تفاصيل التحويل البنكي</h3>
-                 <p className="text-slate-400 text-sm mb-8">يرجى تحويل المبلغ الموضح أدناه لتفعيل اشتراكك فوراً.</p>
-                 <div className="bg-white/5 border border-white/10 rounded-3xl p-6 text-right space-y-4 mb-8">
-                    <div className="flex justify-between items-center border-b border-white/5 pb-3">
-                        <span className="text-white font-black text-lg">{selectedPlan.price} SD</span>
-                        <span className="text-slate-500 text-xs">المبلغ المطلوب</span>
-                    </div>
-                    <div className="flex justify-between items-center border-b border-white/5 pb-3">
-                        <span className="text-white font-mono font-bold">7928440</span>
-                        <span className="text-slate-500 text-xs">رقم الحساب</span>
-                    </div>
-                    <div className="flex justify-between items-center border-b border-white/5 pb-3">
-                        <span className="text-white font-mono font-bold tracking-wider">0116158407</span>
-                        <span className="text-slate-500 text-xs">رقم التحويل (الإشعار)</span>
-                    </div>
-                    <div className="flex justify-between items-center">
-                        <span className="text-white font-bold">مازن حسين</span>
-                        <span className="text-slate-500 text-xs">اسم المستفيد</span>
-                    </div>
+              <div className="flex flex-col h-full bg-slate-50">
+                 <div className="bg-white p-8 text-center border-b border-slate-200">
+                    <h3 className="text-2xl font-black text-slate-900">تأكيد الاشتراك</h3>
+                    <p className="text-slate-500 text-sm mt-1">إرسال إثبات التحويل عبر الواتساب</p>
                  </div>
-                 <div className="flex flex-col gap-4">
-                    <button onClick={handleDoneTransfer} className="w-full bg-[#c1272d] hover:bg-red-600 text-white font-black py-5 rounded-2xl shadow-xl active:scale-95 transition-all">تم التحويل، المتابعة</button>
-                    <button onClick={closeModal} className="w-full py-4 rounded-2xl text-slate-500 font-bold hover:text-white transition-colors">إلغاء</button>
+
+                 <div className="p-8 flex-1 space-y-8 overflow-y-auto">
+                    <button 
+                      onClick={handleSendToWhatsApp}
+                      className="w-full py-10 bg-emerald-500 text-white rounded-[2.5rem] flex flex-col items-center justify-center gap-4 hover:bg-emerald-600 transition-all shadow-xl active:scale-95 group"
+                    >
+                      <div className="w-20 h-20 bg-white/20 rounded-full flex items-center justify-center group-hover:scale-110 transition-transform">
+                        <span className="text-5xl">📱</span>
+                      </div>
+                      <div className="text-center">
+                        <p className="text-2xl font-black">إرسال الإشعار للواتساب</p>
+                        <p className="text-white/80 text-sm mt-1">اضغط هنا لفتح المحادثة وإرسال الصورة</p>
+                      </div>
+                    </button>
+
+                    <div className="space-y-4 pt-4">
+                       <div className="p-5 bg-white border border-slate-200 rounded-2xl text-center">
+                          <p className="text-slate-500 text-sm font-bold">بمجرد استلامنا للإشعار، سنقوم بإرسال كود التفعيل لك فوراً.</p>
+                       </div>
+                       
+                       <label className="text-xs font-black text-slate-500 uppercase tracking-widest px-2">هل استلمت كود التفعيل؟</label>
+                       <input 
+                         type="text"
+                         value={activationCode}
+                         onChange={e => setActivationCode(e.target.value)}
+                         placeholder="أدخل كود التفعيل هنا لتفعيل الباقة"
+                         className="w-full bg-white border border-slate-200 rounded-2xl py-5 px-6 text-slate-900 font-bold outline-none focus:border-[#cc0000] transition-all text-center text-xl"
+                       />
+                    </div>
+
+                    {error && <div className="p-4 bg-red-100 text-[#cc0000] rounded-2xl text-center text-sm font-bold border border-red-200">{error}</div>}
                  </div>
+                 
+                 <div className="p-8 bg-white border-t border-slate-200">
+                    <button onClick={handleActivate} className="w-full py-5 bg-[#cc0000] text-white font-black rounded-2xl text-xl hover:bg-[#aa0000] transition-all">
+                       تفعيل الباقة الآن
+                    </button>
+                 </div>
+              </div>
+            ) : step === 'pre_reg' ? (
+              <div className="flex flex-col h-full bg-[#050510]">
+                <div className="p-16 flex flex-col items-center justify-center h-full space-y-12">
+                  <div className="w-40 h-40 rounded-[3rem] bg-indigo-600/20 border border-indigo-500/30 flex items-center justify-center text-8xl animate-royal-glow gold-center-icon">🎁</div>
+                  <div className="text-center space-y-4">
+                     <h3 className="text-5xl font-black text-white">تسجيل مسبق (هدية)</h3>
+                     <p className="text-slate-500 text-2xl font-bold">باقي 250 مقعداً فقط للمطالبة بالكود</p>
+                  </div>
+                  <form onSubmit={handlePreRegSubmit} className="w-full max-w-md space-y-6">
+                    <input 
+                        type="text" 
+                        value={userName} 
+                        onChange={e => setUserName(e.target.value)} 
+                        placeholder="اكتب اسمك هنا" 
+                        className="w-full bg-white/5 border-2 border-white/10 rounded-[2rem] py-8 text-center text-white font-black text-2xl outline-none focus:border-amber-500 transition-all" 
+                    />
+                    <button 
+                        type="submit"
+                        disabled={loading}
+                        className="w-full py-8 bg-gradient-to-r from-red-600 via-blue-600 to-white text-black font-black rounded-[2rem] text-3xl shadow-2xl hover:scale-[1.03] active:scale-95 transition-all"
+                    >{loading ? 'جاري التحويل للواتساب...' : 'حجز مكاني الآن'}</button>
+                  </form>
+                  {error && <p className="text-red-500 font-bold">{error}</p>}
+                </div>
+              </div>
+            ) : step === 'pre_reg_success' ? (
+              <div className="flex flex-col h-full p-16 bg-[#050510] items-center justify-center text-center space-y-12">
+                <div className="w-32 h-32 bg-amber-500 rounded-full flex items-center justify-center mx-auto text-white text-6xl shadow-[0_0_50px_rgba(245,158,11,0.4)] animate-bounce-gentle">✓</div>
+                <div className="space-y-6">
+                   <h3 className="text-5xl font-black text-white">تم حجز مكانك بنجاح!</h3>
+                   <div className="p-8 bg-white/5 border border-white/10 rounded-[3rem] space-y-4">
+                      <p className="text-3xl text-amber-400 font-black italic">ستفتح المنصة بعد 5 أيام</p>
+                      <p className="text-2xl text-white font-bold">الموعد: 30 يناير القادم</p>
+                      <hr className="border-white/10" />
+                      <p className="text-slate-400 text-lg">يرجى طلب كود التفعيل المجاني عبر رسالة الواتساب التي أرسلتها الآن.</p>
+                   </div>
+                </div>
+                <button onClick={closeOverlay} className="w-full max-w-md py-6 bg-white text-black font-black rounded-[2rem] text-2xl hover:bg-slate-200 transition-all shadow-2xl">فهمت، سأنتظر الافتتاح</button>
               </div>
             ) : step === 'activation' ? (
-              <div className="animate-in zoom-in duration-500 space-y-8">
-                <div>
-                  <h3 className="text-2xl font-black text-white mb-2">رمز التأكيد المطلوب</h3>
-                  <p className="text-slate-400 text-sm px-4">أدخل رمز التنشيط الذي حصلت عليه بعد عملية الدفع لإكمال العملية.</p>
-                </div>
-                <div className="relative group">
-                  <input
-                    type="text"
-                    value={activationCode}
-                    onChange={(e) => { setActivationCode(e.target.value); setActivationError(''); }}
-                    placeholder="أدخل الرمز هنا"
-                    className="w-full bg-black/40 border border-white/10 rounded-2xl py-5 px-4 text-center text-white font-black text-xl focus:border-indigo-500 focus:outline-none transition-all placeholder:text-white/10 tracking-widest shadow-inner"
-                  />
-                </div>
-                {activationError && (
-                  <div className="bg-rose-500/10 border-rose-500/20 text-rose-400 text-xs font-black py-3 rounded-xl">
-                    {activationError}
-                  </div>
-                )}
-                <div className="flex flex-col gap-3">
-                  <button onClick={handleActivate} className="w-full liquid-button py-5 rounded-2xl text-white font-black text-lg hover:scale-[1.02] active:scale-95 transition-all shadow-xl shadow-indigo-900/20">تأكيد وتفعيل</button>
-                  <button onClick={() => setStep('payment')} className="text-slate-500 text-xs font-bold hover:text-white transition-colors">العودة لبيانات التحويل</button>
-                </div>
+              <div className="flex flex-col h-full bg-[#050510] p-16 items-center justify-center space-y-16">
+                <div className="w-40 h-40 rounded-[3rem] bg-indigo-600/20 border border-indigo-500/30 flex items-center justify-center text-8xl animate-pulse">🔑</div>
+                <input 
+                    type="text" 
+                    value={activationCode} 
+                    onChange={e => setActivationCode(e.target.value)} 
+                    placeholder="X X X - X X X" 
+                    className="w-full max-w-md bg-white/5 border-2 border-white/10 rounded-[3rem] py-10 text-center text-white font-black text-5xl outline-none focus:border-indigo-500 transition-all uppercase tracking-widest shadow-inner" 
+                />
+                <button onClick={handleActivate} className="w-full max-w-md py-8 bg-indigo-600 text-white font-black rounded-[3rem] text-4xl shadow-2xl hover:scale-[1.03] active:scale-95 transition-all">تفعيل الآن</button>
               </div>
             ) : (
-                <div className="animate-in zoom-in duration-500">
-                    <h3 className="text-4xl font-black text-white mb-4 tracking-tight">تم التنشيط بنجاح!</h3>
-                    <p className="text-slate-300 text-lg mb-10 leading-relaxed px-6 font-medium">باقة <span className="text-white font-black underline decoration-emerald-500 underline-offset-8">{selectedPlan.title}</span> مفعلة الآن بالكامل.</p>
-                    <button onClick={closeModal} className="w-full liquid-button py-6 rounded-2xl text-white font-black text-xl hover:scale-[1.05] active:scale-95 transition-all shadow-2xl shadow-indigo-900/40">فتح لوحة التحكم الذكية</button>
+              <div className="flex flex-col h-full p-16 bg-[#050510] items-center justify-center text-center">
+                <div className="bg-white w-full max-w-xl rounded-[4rem] shadow-2xl p-16 space-y-10 animate-in zoom-in-95 duration-700">
+                   <div className="w-32 h-32 bg-emerald-500 rounded-full flex items-center justify-center mx-auto mb-6 text-white text-6xl shadow-2xl animate-bounce-gentle">✓</div>
+                   <h3 className="text-5xl font-black text-slate-900">تم التفعيل</h3>
+                   <p className="text-slate-500 text-xl">باقتك جاهزة الآن للاستخدام</p>
+                   <button onClick={closeOverlay} className="w-full py-8 bg-slate-900 text-white font-black rounded-[2.5rem] text-3xl shadow-2xl hover:scale-[1.02] transition-all">دخول للنظام</button>
                 </div>
+              </div>
             )}
           </div>
         </div>
       )}
-    </section>
+    </div>
   );
 };
 

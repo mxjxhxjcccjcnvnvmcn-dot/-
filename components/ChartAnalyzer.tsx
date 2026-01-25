@@ -2,258 +2,268 @@
 import React, { useState, useRef } from 'react';
 import { analyzeChartImage } from '../services/geminiService';
 import { AnalysisResult, SignalType } from '../types';
-
-const resizeImage = (file: File): Promise<string> => {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.readAsDataURL(file);
-    reader.onload = (event) => {
-      const img = new Image();
-      img.src = event.target?.result as string;
-      img.onload = () => {
-        const canvas = document.createElement('canvas');
-        const MAX_WIDTH = 800; 
-        const MAX_HEIGHT = 800;
-        let width = img.width;
-        let height = img.height;
-
-        if (width > height) {
-          if (width > MAX_WIDTH) {
-            height *= MAX_WIDTH / width;
-            width = MAX_WIDTH;
-          }
-        } else {
-          if (height > MAX_HEIGHT) {
-            width *= MAX_HEIGHT / height;
-            height = MAX_HEIGHT;
-          }
-        }
-        canvas.width = width;
-        canvas.height = height;
-        const ctx = canvas.getContext('2d');
-        ctx?.drawImage(img, 0, 0, width, height);
-        resolve(canvas.toDataURL('image/jpeg', 0.8)); 
-      };
-      img.onerror = (error) => reject(error);
-    };
-    reader.onerror = (error) => reject(error);
-  });
-};
+import { PlanTheme } from './SubscriptionPlans';
 
 interface ChartAnalyzerProps {
   isLocked?: boolean;
+  activePlan?: string;
+  planTheme?: PlanTheme;
+  quota?: number;
+  onDecrementQuota?: () => void;
+  onAnalysisComplete?: (result: AnalysisResult) => void;
+  onOpenDonation?: () => void;
 }
 
-const ChartAnalyzer: React.FC<ChartAnalyzerProps> = ({ isLocked = false }) => {
+const ChartAnalyzer: React.FC<ChartAnalyzerProps> = ({ 
+  isLocked = false, 
+  activePlan = 'مجاني', 
+  planTheme, 
+  quota = 0, 
+  onDecrementQuota,
+  onAnalysisComplete,
+  onOpenDonation
+}) => {
   const [image, setImage] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<AnalysisResult | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [userPrompt, setUserPrompt] = useState("");
-  const [analysisTime, setAnalysisTime] = useState<string>("");
-  
   const fileInputRef = useRef<HTMLInputElement>(null);
-
-  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (isLocked) return;
-    const file = e.target.files?.[0];
-    if (file) {
-      try {
-        const optimizedImage = await resizeImage(file);
-        setImage(optimizedImage);
-        setResult(null);
-        setError(null);
-        setAnalysisTime("");
-      } catch (err) {
-        console.error("Image processing failed", err);
-        setError("فشل في معالجة الصورة");
-      }
-    }
-  };
 
   const startAnalysis = async () => {
     if (!image || isLocked) return;
-    
+    if (activePlan !== 'مجاني' && quota <= 0) {
+      setError("عذراً، انتهى رصيد الصور في باقتك.");
+      return;
+    }
+
     setLoading(true);
     setError(null);
     try {
       const base64Data = image.split(',')[1];
-      const analysis = await analyzeChartImage(base64Data, userPrompt);
-      
-      const now = new Date();
-      const timeString = now.toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute:'2-digit', second:'2-digit' });
-      setAnalysisTime(timeString);
-
+      const analysis = await analyzeChartImage(base64Data);
       setResult(analysis);
-      
-    } catch (err: any) {
-      setError(err.message || "حدث خطأ غير متوقع");
+      if (onDecrementQuota) onDecrementQuota();
+      if (onAnalysisComplete) onAnalysisComplete(analysis);
+      window.dispatchEvent(new CustomEvent('scan-completed'));
+    } catch (err) {
+      setError("فشل الاتصال بمحرك الذكاء الاصطناعي. تأكد من جودة الصورة.");
     } finally {
       setLoading(false);
     }
   };
 
-  const formatDuration = (d?: string) => {
-    if (d === '5s') return '5 ثواني';
-    if (d === '15s') return '15 ثانية';
-    if (d === '1m') return '1 دقيقة';
-    return d || '--';
+  const getPlanStyles = () => {
+    switch (activePlan) {
+      case 'ذهبي': 
+        return { 
+          accent: 'text-amber-400', 
+          border: 'border-amber-500/40', 
+          bg: 'from-amber-600 to-yellow-500', 
+          icon: '🥇', 
+          label: 'الباقة الذهبية', 
+          desc: 'تحليل فائق السرعة + كشف الحيتان',
+          glowClass: 'animate-gold-halo'
+        };
+      case 'بلاتيني': 
+        return { 
+          accent: 'text-indigo-400', 
+          border: 'border-indigo-500/50', 
+          bg: 'from-indigo-600 to-purple-600', 
+          icon: '💎', 
+          label: 'الباقة البلاتينية', 
+          desc: 'أولوية قصوى + تحليل لحظي',
+          glowClass: 'animate-liquid-glow-platinum'
+        };
+      case 'فضي': 
+        return { 
+          accent: 'text-slate-300', 
+          border: 'border-slate-500/40', 
+          bg: 'from-slate-600 to-slate-500', 
+          icon: '🥈', 
+          label: 'الباقة الفضية', 
+          desc: 'تحليل سريع: 25 صورة يومياً',
+          glowClass: 'animate-silver-pulse-glow'
+        };
+      case 'هدية المنصة':
+        return {
+          accent: 'text-amber-300',
+          border: 'border-white/40',
+          bg: 'from-red-600 to-blue-600',
+          icon: '🎁',
+          label: 'هدية المنصة',
+          desc: 'باقة الحجز المسبق',
+          glowClass: 'animate-royal-glow'
+        };
+      default: 
+        return { 
+          accent: 'text-indigo-400', 
+          border: 'border-white/10', 
+          bg: 'bg-indigo-600', 
+          icon: '👤', 
+          label: 'خطة مجانية', 
+          desc: 'اشترك للتحليل فائق السرعة',
+          glowClass: ''
+        };
+    }
   };
 
+  const styles = getPlanStyles();
+
   return (
-    <div className="space-y-12">
-      {/* Input Zone */}
-      <div className={`glass-panel-heavy rounded-[3rem] p-8 lg:p-12 relative overflow-hidden transition-all duration-500 ${isLocked ? 'opacity-80' : 'hover:shadow-[0_0_50px_rgba(79,70,229,0.15)]'}`}>
-        <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-500/10 rounded-full blur-[80px] pointer-events-none"></div>
-
-        {isLocked ? (
-          <div className="flex flex-col items-center justify-center py-20 text-center space-y-8 animate-in fade-in duration-700">
-             <div className="relative w-24 h-24 bg-white/5 rounded-3xl flex items-center justify-center border border-white/10 shadow-2xl">
-                <svg className="w-12 h-12 text-amber-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-                </svg>
+    <div className="space-y-8">
+      <div className={`rounded-[3rem] p-8 relative transition-all duration-700 ${isLocked ? 'glass-panel-heavy overflow-hidden' : `glass-panel-heavy border-2 ${styles.border} shadow-2xl`}`}>
+        
+        {!isLocked && (
+          <div className="absolute top-6 right-6 z-10">
+             <div className="px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 flex items-center gap-2">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                <span className="text-[9px] font-black text-emerald-400 uppercase tracking-widest">Rapid Logic Active</span>
              </div>
-             <h3 className="text-3xl font-black text-white">ميزة التحليل مغلقة</h3>
-             <button onClick={() => document.getElementById('pricing')?.scrollIntoView({ behavior: 'smooth' })} className="px-8 py-4 bg-amber-500 text-black font-black rounded-2xl shadow-xl">اذهب لخطط التفعيل</button>
-          </div>
-        ) : (
-          <div className="flex flex-col items-center justify-center gap-8 w-full relative z-10 animate-in zoom-in duration-700">
-            <div onClick={() => fileInputRef.current?.click()} className={`w-full max-w-2xl h-72 border border-dashed rounded-[2rem] flex flex-col items-center justify-center cursor-pointer transition-all duration-300 overflow-hidden relative ${image ? 'border-indigo-400/50 bg-indigo-900/10' : 'border-white/20 hover:border-indigo-400/50 hover:bg-white/5'}`}>
-              {image ? <img src={image} alt="Uploaded chart" className="h-full w-full object-contain p-4 drop-shadow-2xl" /> : (
-                <>
-                  <div className="w-16 h-16 bg-white/5 rounded-full flex items-center justify-center mb-4 border border-white/10 shadow-lg">
-                    <svg className="w-8 h-8 text-indigo-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
-                  </div>
-                  <span className="text-white font-medium text-lg">اضغط لرفع الشارت</span>
-                </>
-              )}
-              <input type="file" ref={fileInputRef} onChange={handleImageUpload} accept="image/*" className="hidden" />
-            </div>
-
-            <div className="w-full max-w-2xl relative">
-              <textarea value={userPrompt} onChange={(e) => setUserPrompt(e.target.value)} placeholder="اسأل الذكاء الاصطناعي عن هذا الشارت..." className="w-full bg-black/20 border border-white/10 rounded-3xl p-6 pl-16 focus:border-indigo-500/50 outline-none text-white h-28" dir="rtl" />
-              <div className="absolute bottom-4 left-4">
-                <button onClick={startAnalysis} disabled={!image || loading} className={`w-10 h-10 rounded-full flex items-center justify-center ${!image || loading ? 'bg-white/5 text-slate-600' : 'bg-indigo-600 text-white shadow-lg'}`}>
-                  <svg className="w-5 h-5 rotate-180" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" /></svg>
-                </button>
-              </div>
-            </div>
-
-            <button onClick={startAnalysis} disabled={!image || loading} className={`w-full max-w-sm py-5 rounded-2xl font-black text-xl liquid-button ${!image || loading ? 'opacity-50 grayscale' : 'text-white'}`}>
-              {loading ? 'جاري المعالجة...' : 'تحليل الآن'}
-            </button>
           </div>
         )}
-      </div>
 
-      {error && <div className="glass-panel bg-rose-500/10 border-rose-500/20 text-rose-300 p-4 rounded-2xl text-center">{error}</div>}
+        {!isLocked && activePlan !== 'مجاني' && (
+          <div className="absolute top-6 left-6 z-10 animate-in fade-in slide-in-from-top-4 duration-700">
+            <div className={`px-4 py-2 rounded-full border bg-black/40 backdrop-blur-md flex items-center gap-2 shadow-lg ${styles.border}`}>
+              <span className="text-sm">{styles.icon}</span>
+              <span className={`text-[10px] font-black uppercase tracking-widest ${styles.accent}`}>{styles.label}</span>
+            </div>
+          </div>
+        )}
 
-      {result && !isLocked && (
-        <div className="animate-in fade-in slide-in-from-bottom-8 duration-700 space-y-8">
-          <div className="glass-panel-heavy rounded-[2.5rem] overflow-hidden border-t border-white/20">
-            {!result.isValidChart ? (
-              <div className="p-16 text-center"><p className="text-slate-400">الصورة لا تحتوي على تشارت تداول صالح.</p></div>
+        {isLocked && (
+          <div className="absolute inset-0 z-50 flex flex-col items-center justify-center bg-black/80 backdrop-blur-md p-6">
+            
+            {/* Donation Option inside Locked Overlay */}
+            <div className="mb-8 w-full max-w-xs animate-in slide-in-from-top-4 duration-700 delay-300">
+               <button 
+                onClick={onOpenDonation}
+                className="w-full py-4 px-6 rounded-2xl bg-white text-rose-600 font-black flex items-center justify-center gap-3 shadow-2xl hover:scale-105 active:scale-95 transition-all group"
+               >
+                 <span className="relative flex h-3 w-3">
+                   <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-75"></span>
+                   <span className="relative inline-flex rounded-full h-3 w-3 bg-rose-600"></span>
+                 </span>
+                 تبرع لدعم المنصة ❤️
+               </button>
+               <p className="text-[10px] text-white/40 text-center mt-3 font-bold uppercase tracking-widest">Support our development</p>
+            </div>
+
+            <div className="w-20 h-20 bg-white/5 rounded-full flex items-center justify-center mb-4 animate-pulse border border-white/10">
+               <span className="text-4xl">🔒</span>
+            </div>
+            <h4 className="text-2xl font-black text-white">النظام مقفل</h4>
+            <p className="text-slate-400 text-sm">اشترك لتفعيل محرك التحليل الرقمي</p>
+          </div>
+        )}
+
+        <div className={`flex flex-col gap-6 ${isLocked ? 'opacity-20 grayscale' : ''}`}>
+          <div 
+            onClick={() => !isLocked && fileInputRef.current?.click()} 
+            className={`w-full h-72 border-2 border-dashed rounded-[2.5rem] flex flex-col items-center justify-center transition-all overflow-hidden relative ${image ? 'border-transparent bg-white/5' : `border-white/10 hover:bg-white/5 cursor-pointer`}`}
+          >
+            {image ? (
+              <img src={image} className="h-full w-full object-contain p-4" alt="Chart" />
             ) : (
-              <>
-                <div className={`h-2 w-full ${result.recommendation === SignalType.BUY ? 'bg-emerald-500' : result.recommendation === SignalType.SELL ? 'bg-rose-500' : 'bg-amber-500'}`} />
-                
-                <div className="p-8 lg:p-12 space-y-12">
-                  {/* Summary Header */}
-                  <div className="glass-panel rounded-3xl p-8 grid grid-cols-1 md:grid-cols-3 gap-8 items-center border-white/5">
-                    <div className="text-center md:text-right">
-                      <span className="text-[10px] text-indigo-300 font-bold uppercase tracking-widest block mb-1">القرار الفني</span>
-                      <div className={`text-5xl font-black ${result.recommendation === SignalType.BUY ? 'text-emerald-400' : result.recommendation === SignalType.SELL ? 'text-rose-400' : 'text-amber-400'}`}>
-                        {result.recommendation === SignalType.BUY ? 'شراء' : result.recommendation === SignalType.SELL ? 'بيع' : 'انتظار'}
-                      </div>
-                    </div>
-                    <div className="text-center">
-                      <span className="text-[10px] text-indigo-300 font-bold uppercase tracking-widest block mb-2">نسبة الثقة</span>
-                      <div className="flex flex-col items-center gap-2">
-                        <span className="text-3xl font-mono font-bold text-white">{Math.round(result.confidence * 100)}%</span>
-                        <div className="w-32 h-1.5 bg-white/5 rounded-full overflow-hidden">
-                           <div className="h-full bg-indigo-500 transition-all duration-1000" style={{width: `${result.confidence * 100}%`}}></div>
-                        </div>
-                      </div>
-                    </div>
-                    <div className="text-center md:text-left">
-                      <span className="text-[10px] text-indigo-300 font-bold uppercase tracking-widest block mb-1">المدة المقترحة</span>
-                      <div className="text-2xl font-black text-white">{formatDuration(result.suggestedDuration)}</div>
-                    </div>
-                  </div>
-
-                  {/* Indicators Grid */}
-                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                    {/* Technical Indicators Details */}
-                    <div className="glass-panel p-8 rounded-[2rem] border-white/5 space-y-6">
-                       <h4 className="text-lg font-black text-white border-b border-white/10 pb-3 flex items-center gap-2">
-                          <span className="text-indigo-400">📊</span> المؤشرات الفنية
-                       </h4>
-                       <div className="space-y-4">
-                          <div className="p-4 rounded-2xl bg-white/5 border border-white/5">
-                             <span className="text-[10px] font-bold text-indigo-300 uppercase block mb-1">RSI</span>
-                             <p className="text-sm text-slate-300 leading-relaxed">{result.indicators.rsi || 'لم يتم اكتشاف إشارة واضحة'}</p>
-                          </div>
-                          <div className="p-4 rounded-2xl bg-white/5 border border-white/5">
-                             <span className="text-[10px] font-bold text-indigo-300 uppercase block mb-1">MACD</span>
-                             <p className="text-sm text-slate-300 leading-relaxed">{result.indicators.macd || 'لم يتم اكتشاف إشارة واضحة'}</p>
-                          </div>
-                          <div className="p-4 rounded-2xl bg-white/5 border border-white/5">
-                             <span className="text-[10px] font-bold text-indigo-300 uppercase block mb-1">Moving Averages</span>
-                             <p className="text-sm text-slate-300 leading-relaxed">{result.indicators.movingAverages || 'لم يتم اكتشاف إشارة واضحة'}</p>
-                          </div>
-                       </div>
-                    </div>
-
-                    {/* Support & Resistance Levels */}
-                    <div className="glass-panel p-8 rounded-[2rem] border-white/5 space-y-6">
-                       <h4 className="text-lg font-black text-white border-b border-white/10 pb-3 flex items-center gap-2">
-                          <span className="text-amber-400">⚖️</span> المستويات السعرية
-                       </h4>
-                       <div className="grid grid-cols-2 gap-4">
-                          <div className="space-y-3">
-                             <span className="text-[10px] font-bold text-rose-400 uppercase tracking-widest block text-center bg-rose-500/10 py-1 rounded-md">المقاومة</span>
-                             <div className="space-y-2">
-                                {result.resistanceLevels.map((level, i) => (
-                                   <div key={i} className="text-center py-2 px-3 rounded-xl bg-white/5 text-rose-200 font-mono text-xs border border-rose-500/10">
-                                      {level}
-                                   </div>
-                                ))}
-                             </div>
-                          </div>
-                          <div className="space-y-3">
-                             <span className="text-[10px] font-bold text-emerald-400 uppercase tracking-widest block text-center bg-emerald-500/10 py-1 rounded-md">الدعم</span>
-                             <div className="space-y-2">
-                                {result.supportLevels.map((level, i) => (
-                                   <div key={i} className="text-center py-2 px-3 rounded-xl bg-white/5 text-emerald-200 font-mono text-xs border border-emerald-500/10">
-                                      {level}
-                                   </div>
-                                ))}
-                             </div>
-                          </div>
-                       </div>
-                    </div>
-                  </div>
-
-                  {/* Summary & Reasoning */}
-                  <div className="glass-panel p-8 rounded-[2rem] border-white/5">
-                     <h4 className="text-lg font-black text-white mb-4">التحليل الشامل</h4>
-                     <p className="text-slate-300 leading-loose text-lg mb-8 italic">"{result.summary}"</p>
-                     
-                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        {result.reasoning.map((reason, i) => (
-                           <div key={i} className="flex items-start gap-3 p-3 rounded-xl bg-white/5 border border-white/5">
-                              <span className="text-indigo-400 mt-1">●</span>
-                              <span className="text-sm text-slate-400">{reason}</span>
-                           </div>
-                        ))}
-                     </div>
-                  </div>
+              <div className="text-center px-6">
+                <div className="w-16 h-16 rounded-2xl bg-white/5 flex items-center justify-center mx-auto mb-4 border border-white/10">
+                   <span className="text-3xl">📁</span>
                 </div>
-              </>
+                <h4 className="text-xl font-black text-white">اختر لقطة الشارت</h4>
+                <p className="text-xs text-slate-500 mt-1">يدعم جميع أنواع الأصول المالية</p>
+              </div>
             )}
           </div>
+
+          <input type="file" ref={fileInputRef} onChange={e => { const f = e.target.files?.[0]; if (f) { const r = new FileReader(); r.readAsDataURL(f); r.onload = () => setImage(r.result as string); } }} className="hidden" accept="image/*" />
+
+          {!isLocked && activePlan !== 'مجاني' && (
+            <div className={`w-full p-6 rounded-[2rem] border bg-black/40 backdrop-blur-xl flex items-center justify-between animate-in zoom-in duration-500 shadow-2xl ${styles.border} ${styles.glowClass}`}>
+              <div className="flex items-center gap-5">
+                <div className={`w-14 h-14 rounded-2xl bg-white/5 border flex items-center justify-center text-3xl shadow-inner ${styles.border}`}>
+                  {styles.icon}
+                </div>
+                <div className="text-right">
+                  <h5 className={`text-lg font-black ${styles.accent}`}>{styles.label}</h5>
+                  <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">{styles.desc}</p>
+                </div>
+              </div>
+              <div className="text-left">
+                <span className="block text-[9px] text-slate-500 font-black uppercase tracking-tighter mb-1">الرصيد المتبقي</span>
+                <span className="text-2xl font-black text-white">{quota} <small className="text-[10px] text-slate-400">صورة</small></span>
+              </div>
+            </div>
+          )}
+          
+          <button 
+            onClick={startAnalysis} 
+            disabled={!image || loading || isLocked} 
+            className={`w-full py-5 rounded-2xl font-black text-xl shadow-xl disabled:opacity-50 transition-all flex items-center justify-center gap-3 text-white bg-gradient-to-r ${styles.bg}`}
+          >
+            {loading ? (
+              <div className="w-6 h-6 border-3 border-white/30 border-t-white rounded-full animate-spin"></div>
+            ) : (
+                <React.Fragment>
+                  <span>بدء التحليل الفوري</span>
+                  <span className="text-sm">⚡</span>
+                </React.Fragment>
+            )}
+          </button>
+        </div>
+      </div>
+
+      {result && !isLocked && (
+        <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-700">
+           <div className={`p-8 rounded-[2.5rem] border-t-[6px] glass-panel-heavy shadow-2xl relative overflow-hidden`} style={{ borderColor: result.recommendation === SignalType.BUY ? '#10b981' : (result.recommendation === SignalType.SELL ? '#f43f5e' : '#94a3b8') }}>
+              <div className="absolute top-0 right-0 w-32 h-32 bg-white/5 blur-3xl rounded-full"></div>
+              
+              <div className="flex flex-col md:flex-row justify-between items-center gap-6 mb-8">
+                 <div className="text-center md:text-right">
+                    <span className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400 block mb-1">توصية النظام</span>
+                    <h2 className={`text-6xl font-black italic drop-shadow-xl`} style={{ color: result.recommendation === SignalType.BUY ? '#10b981' : (result.recommendation === SignalType.SELL ? '#f43f5e' : '#94a3b8') }}>
+                       {result.recommendation === SignalType.BUY ? 'شـــراء' : (result.recommendation === SignalType.SELL ? 'بـيـــع' : 'انـتـظـار')}
+                    </h2>
+                 </div>
+                 <div className="flex flex-col items-center md:items-end">
+                    <span className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400 block mb-1">قوة الإشارة</span>
+                    <div className="text-5xl font-black text-white">{Math.round(result.confidence * 100)}%</div>
+                 </div>
+              </div>
+
+              <div className="bg-white/5 p-6 rounded-2xl border border-white/5 mb-6">
+                 <p className="text-slate-200 leading-relaxed text-lg italic">"{result.summary}"</p>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                 <div className="space-y-4">
+                    <h4 className="text-xs font-black text-indigo-400 uppercase tracking-widest border-b border-white/5 pb-2">الأسباب الفنية (Rule-Based)</h4>
+                    <ul className="space-y-2">
+                       {result.reasoning.map((r, i) => (
+                          <li key={i} className="flex gap-2 text-sm text-slate-400">
+                             <span className="text-indigo-500">•</span> {r}
+                          </li>
+                       ))}
+                    </ul>
+                 </div>
+                 <div className="space-y-4">
+                    <h4 className="text-xs font-black text-indigo-400 uppercase tracking-widest border-b border-white/5 pb-2">تفاصيل المؤشرات</h4>
+                    <div className="grid grid-cols-2 gap-3">
+                       <div className="bg-black/20 p-3 rounded-xl border border-white/5">
+                          <span className="text-[9px] text-slate-500 uppercase block">RSI</span>
+                          <span className="text-white font-bold">{result.indicators.rsi}</span>
+                       </div>
+                       <div className="bg-black/20 p-3 rounded-xl border border-white/5">
+                          <span className="text-[9px] text-slate-500 uppercase block">Trend</span>
+                          <span className="text-white font-bold text-xs">{result.indicators.movingAverages}</span>
+                       </div>
+                    </div>
+                 </div>
+              </div>
+           </div>
         </div>
       )}
+      
+      {error && <div className="p-4 bg-rose-500/10 border border-rose-500/20 text-rose-400 rounded-2xl text-center text-sm font-bold">{error}</div>}
     </div>
   );
 };

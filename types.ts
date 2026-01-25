@@ -22,6 +22,23 @@ export interface AnalysisResult {
   suggestedDuration: string; // New field for 5s, 15s, 1m
 }
 
+export interface HistoryEntry extends AnalysisResult {
+  id: string;
+  timestamp: number;
+}
+
+export interface Watchlist {
+  id: string;
+  name: string;
+  symbols: string[];
+}
+
+export interface UserProfileData {
+  favorites: string[];
+  watchlists: Watchlist[];
+  history: HistoryEntry[];
+}
+
 export interface MarketData {
   time: string;
   price: number;

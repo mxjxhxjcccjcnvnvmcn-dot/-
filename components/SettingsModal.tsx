@@ -11,8 +11,6 @@ interface SettingsModalProps {
   onClose: () => void;
   config: ThemeConfig;
   onUpdate: (key: keyof ThemeConfig, value: any) => void;
-  isVoiceCallEnabled: boolean; // New prop
-  onToggleVoiceCall: (enabled: boolean) => void; // New prop
 }
 
 export const GRADIENTS = [
@@ -42,12 +40,11 @@ export const GRADIENTS = [
   }
 ];
 
-const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, config, onUpdate, isVoiceCallEnabled, onToggleVoiceCall }) => {
+const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, config, onUpdate }) => {
   if (!isOpen) return null;
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-      {/* Backdrop */}
       <div 
         className="absolute inset-0 bg-black/60 backdrop-blur-sm transition-opacity"
         onClick={onClose}
@@ -64,7 +61,6 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, config, 
         </div>
 
         <div className="space-y-8">
-          {/* Blur Control */}
           <div>
             <div className="flex justify-between mb-3">
               <label className="text-sm font-bold text-indigo-200">شفافية الزجاج (Blur)</label>
@@ -79,13 +75,8 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, config, 
               onChange={(e) => onUpdate('blur', parseInt(e.target.value))}
               className="w-full h-2 bg-white/10 rounded-lg appearance-none cursor-pointer accent-indigo-500 hover:accent-indigo-400"
             />
-            <div className="flex justify-between text-[10px] text-slate-500 mt-1 px-1">
-              <span>صافي</span>
-              <span>ضبابي</span>
-            </div>
           </div>
 
-          {/* Theme Control */}
           <div>
             <label className="block text-sm font-bold text-indigo-200 mb-4">الخلفية المحيطة</label>
             <div className="grid grid-cols-2 gap-3">
@@ -103,38 +94,10 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, config, 
                   <div className="absolute inset-0 flex items-center justify-center">
                     <span className="text-xs font-bold text-white drop-shadow-md z-10">{theme.name}</span>
                   </div>
-                  {config.gradientId === theme.id && (
-                    <div className="absolute top-2 right-2 w-4 h-4 bg-indigo-500 rounded-full border-2 border-white flex items-center justify-center">
-                      <svg className="w-2 h-2 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
-                      </svg>
-                    </div>
-                  )}
                 </button>
               ))}
             </div>
           </div>
-
-          {/* Voice Call Feature Toggle */}
-          <div>
-            <div className="flex items-center justify-between mb-3 border-t border-white/10 pt-6 mt-6">
-              <label htmlFor="voiceCallToggle" className="text-sm font-bold text-indigo-200">مكالمات المساعد الصوتي</label>
-              <label className="relative inline-flex items-center cursor-pointer">
-                <input 
-                  type="checkbox" 
-                  id="voiceCallToggle"
-                  className="sr-only peer" 
-                  checked={isVoiceCallEnabled} 
-                  onChange={(e) => onToggleVoiceCall(e.target.checked)} 
-                />
-                <div className="w-11 h-6 bg-slate-700 rounded-full peer peer-focus:ring-2 peer-focus:ring-indigo-500 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:right-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-600"></div>
-              </label>
-            </div>
-            <p className="text-xs text-slate-400 mt-1">
-              تفعيل/تعطيل زر الاتصال الصوتي مع المساعد "مازن" في شريط التنقل العلوي.
-            </p>
-          </div>
-
         </div>
 
         <div className="mt-8 pt-6 border-t border-white/10">

@@ -12,7 +12,7 @@ const SnowEffect: React.FC<SnowEffectProps> = ({ duration = 5000 }) => {
     const canvas = canvasRef.current;
     if (!canvas) return;
 
-    const ctx = canvas.getContext('2d');
+    const ctx = canvas.getContext('2d', { alpha: true }); // Optimized context
     if (!ctx) return;
 
     let animationFrameId: number;
@@ -42,16 +42,16 @@ const SnowEffect: React.FC<SnowEffectProps> = ({ duration = 5000 }) => {
       rotationSpeed: number;
     }[] = [];
     
-    // Increased particle count for better effect
-    const particleCount = width < 768 ? 60 : 120; 
+    // Reduced particle count for performance (Critical fix for lag)
+    const particleCount = width < 768 ? 25 : 50; 
 
     for (let i = 0; i < particleCount; i++) {
       particles.push({
         x: Math.random() * width,
         y: Math.random() * height - height, // Start above screen
-        size: Math.random() * 12 + 8, // Size between 8px and 20px (visible logos)
-        speed: Math.random() * 2 + 1.5,
-        drift: Math.random() * 1 - 0.5,
+        size: Math.random() * 10 + 6, // Size
+        speed: Math.random() * 2 + 1,
+        drift: Math.random() * 0.5 - 0.25,
         rotation: Math.random() * 360,
         rotationSpeed: (Math.random() - 0.5) * 0.02,
       });
@@ -66,7 +66,7 @@ const SnowEffect: React.FC<SnowEffectProps> = ({ duration = 5000 }) => {
       ctx.clearRect(0, 0, width, height);
       
       if (fading) {
-        opacity -= 0.015;
+        opacity -= 0.02; // Faster fade out
       }
 
       if (opacity <= 0) {
@@ -76,17 +76,16 @@ const SnowEffect: React.FC<SnowEffectProps> = ({ duration = 5000 }) => {
 
       ctx.globalAlpha = opacity;
       ctx.fillStyle = '#ffffff';
-      // Add subtle glow for "Professional" look
-      ctx.shadowColor = 'rgba(255, 255, 255, 0.8)';
-      ctx.shadowBlur = 5;
+      // Removed shadowBlur in loop to increase FPS significantly
+      // ctx.shadowColor = 'rgba(255, 255, 255, 0.8)';
+      // ctx.shadowBlur = 5; 
 
       particles.forEach((p) => {
         ctx.save();
         ctx.translate(p.x, p.y);
         ctx.rotate(p.rotation);
         
-        // Draw Snowflake Icon instead of circle
-        ctx.font = `${p.size}px sans-serif`;
+        ctx.font = `${Math.floor(p.size)}px sans-serif`;
         ctx.textAlign = "center";
         ctx.textBaseline = "middle";
         ctx.fillText("❄", 0, 0);
@@ -98,7 +97,7 @@ const SnowEffect: React.FC<SnowEffectProps> = ({ duration = 5000 }) => {
         p.x += p.drift;
         p.rotation += p.rotationSpeed;
 
-        // Reset if moves out of view (only if not fading to save resources)
+        // Reset if moves out of view (only if not fading)
         if (!fading && p.y > height + 20) {
           p.y = -20;
           p.x = Math.random() * width;
@@ -121,7 +120,6 @@ const SnowEffect: React.FC<SnowEffectProps> = ({ duration = 5000 }) => {
     <canvas
       ref={canvasRef}
       className="fixed inset-0 z-[60] pointer-events-none"
-      style={{ mixBlendMode: 'normal' }} // Changed from overlay to normal for better visibility of white snow
     />
   );
 };

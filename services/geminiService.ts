@@ -2,9 +2,13 @@
 import { GoogleGenAI, Type } from "@google/genai";
 import { AnalysisResult, SignalType } from "../types";
 
-// وظيفة إنشاء العميل لضمان استخدام أحدث مفتاح API من البيئة
 const createAIClient = () => {
-  return new GoogleGenAI({ apiKey: process.env.API_KEY as string });
+  // Use VITE_ or the process.env directly if injected by build tool
+  const apiKey = process.env.API_KEY;
+  if (!apiKey) {
+    console.warn("API_KEY is missing in environment variables.");
+  }
+  return new GoogleGenAI({ apiKey: apiKey as string });
 };
 
 export const analyzeChartImage = async (base64Image: string, timeframe: string = '1h'): Promise<AnalysisResult> => {
@@ -12,33 +16,26 @@ export const analyzeChartImage = async (base64Image: string, timeframe: string =
     const ai = createAIClient();
     
     const systemInstruction = `
-      أنت خبير تحليل فني محترف (Senior Technical Analyst) متخصص في أسواق المال والعملات الرقمية.
-      مهمتك هي تحليل صورة الشارت المرفقة بدقة متناهية بناءً على:
-      1. نماذج الشموع اليابانية (Price Action).
-      2. خطوط الاتجاه (Trendlines) والقنوات السعرية.
-      3. مستويات الدعم والمقاومة الأفقية (S/R Levels).
-      4. مؤشرات الزخم (RSI, MACD, Stochastic).
-      5. المتوسطات المتحركة (Moving Averages).
-
-      يجب أن يكون تحليلك منطقياً، حذراً، ومهنياً.
+      أنت نظام خبير (Trading Bot) متخصص في التحليل الفني للشارتات.
+      وظيفتك تحليل الصورة المرفقة واستخراج الاتجاهات والمؤشرات.
+      يجب أن تكون إجابتك بصيغة JSON فقط.
     `;
 
     const prompt = `
-      قم بتحليل لقطة الشارت هذه لفريم ${timeframe}. 
-      أعطني تقريراً مفصلاً يتضمن:
-      - الاتجاه الحالي (صاعد، هابط، عرضي).
-      - قرار تداول واضح (BUY, SELL, WAIT).
-      - نسبة الثقة في التحليل (من 0 إلى 1).
-      - الأسباب الفنية لهذا القرار (Reasoning).
-      - ملخص تنفيذي للموقف.
-      - أهم مستوى دعم وأهم مستوى مقاومة.
-      - قراءة مؤشر RSI وحالة المتوسطات المتحركة.
-
-      يجب أن تكون النتيجة بتنسيق JSON حصرياً كما هو محدد في الـ Schema.
+      قم بتحليل صورة الشارت المرفقة (فريم ${timeframe}).
+      استخرج البيانات التالية بدقة:
+      - trend: وصف الاتجاه (صاعد/هابط/عرضي).
+      - decision: القرار (BUY, SELL, WAIT).
+      - confidence: نسبة الثقة بين 0 و 1.
+      - reasoning: قائمة من 3 أسباب فنية.
+      - summary: ملخص قصير جداً.
+      - support: أهم مستوى دعم.
+      - resistance: أهم مستوى مقاومة.
+      - rsi: قراءة RSI تقريبية.
     `;
 
     const response = await ai.models.generateContent({
-      model: 'gemini-3-pro-preview',
+      model: 'gemini-3-flash-preview', // Fastest and modern for vision tasks
       contents: [
         {
           parts: [
@@ -60,16 +57,14 @@ export const analyzeChartImage = async (base64Image: string, timeframe: string =
             summary: { type: Type.STRING },
             support: { type: Type.STRING },
             resistance: { type: Type.STRING },
-            rsi_value: { type: Type.STRING },
-            macd_status: { type: Type.STRING }
+            rsi: { type: Type.STRING }
           },
           required: ["trend", "decision", "confidence", "reasoning", "summary", "support", "resistance"]
         }
       }
     });
 
-    const text = response.text || '{}';
-    const data = JSON.parse(text);
+    const data = JSON.parse(response.text || '{}');
     
     let recommendation = SignalType.HOLD;
     if (data.decision === 'BUY') recommendation = SignalType.BUY;
@@ -77,26 +72,22 @@ export const analyzeChartImage = async (base64Image: string, timeframe: string =
 
     return {
       isValidChart: true,
-      symbol: "تحليل الأصل",
+      symbol: "نظام التحليل الذكي",
       recommendation,
-      confidence: data.confidence || 0.5,
+      confidence: data.confidence || 0.7,
       reasoning: data.reasoning || [],
-      summary: data.summary,
+      summary: data.summary || "تمت معالجة الصورة بنجاح.",
       supportLevels: [data.support],
       resistanceLevels: [data.resistance],
       indicators: {
-        rsi: data.rsi_value || "غير محدد",
-        macd: data.macd_status || "غير محدد",
+        rsi: data.rsi || "غير متاح",
         movingAverages: data.trend
       },
       suggestedDuration: timeframe,
       timeframe: timeframe
     };
   } catch (error: any) {
-    console.error("AI Engine Error:", error);
-    if (error.message?.includes("Requested entity was not found")) {
-      window.location.reload();
-    }
-    throw error;
+    console.error("Analysis Engine Failure:", error);
+    throw new Error("فشل في تحليل الصورة. يرجى التأكد من اتصال الإنترنت أو وضوح الصورة.");
   }
 };

@@ -15,15 +15,23 @@ interface PlanProps {
   isPopular?: boolean;
   tier: 'gift' | 'silver' | 'gold' | 'platinum';
   bgGradient: string;
+  isSoldOut?: boolean;
 }
 
 const PLANS_DATA: PlanProps[] = [
   {
     tier: 'gift',
-    title: 'هدية المنصة', price: 'مجاناً', period: 'للأوائل', quota: '20 صورة', badge: 'تسجيل مسبق', glowColor: '#ffd700', icon: '🎁',
-    color: 'from-amber-400/20 to-indigo-900/20',
-    bgGradient: 'radial-gradient(at 0% 0%, #450a0a 0, transparent 50%), radial-gradient(at 100% 100%, #1e1b4b 0, transparent 50%), #020205',
-    features: ['مخصصة لأول 250 مسجل', '20 تحليل فني عالي الدقة', 'صلاحية مفتوحة لأول يوم']
+    title: 'هدية المنصة', 
+    price: 'مكتمل', 
+    period: 'للأوائل', 
+    quota: '0 صورة متاحة', 
+    badge: 'انتهى الحجز', 
+    glowColor: '#475569', 
+    icon: '🎁',
+    color: 'from-slate-700/20 to-slate-900/20',
+    bgGradient: 'radial-gradient(at 0% 0%, #1e293b 0, transparent 50%), radial-gradient(at 100% 100%, #020617 0, transparent 50%), #020205',
+    features: ['باقة الحجز المسبق (مغلقة)', 'لقد اكتمل العدد المسموح به', 'يرجى اختيار باقة مدفوعة'],
+    isSoldOut: true
   },
   {
     tier: 'silver',
@@ -49,10 +57,10 @@ const PLANS_DATA: PlanProps[] = [
 ];
 
 const PlanCard: React.FC<PlanProps & { onSelect?: () => void; isActive?: boolean; isUsed?: boolean }> = ({ 
-  title, price, features, glowColor, badge, icon, onSelect, quota, isActive, tier, isUsed
+  title, price, features, glowColor, badge, icon, onSelect, quota, isActive, tier, isUsed, isSoldOut
 }) => {
   const getGlowClass = () => {
-    if (tier === 'gift') return 'animate-royal-glow border-white/40 scale-[1.05] z-10';
+    if (isSoldOut) return 'border-white/5 opacity-60 grayscale cursor-not-allowed';
     if (tier === 'platinum') return 'animate-liquid-glow-platinum';
     if (tier === 'gold') return 'animate-gold-halo';
     return 'animate-silver-pulse-glow';
@@ -60,8 +68,8 @@ const PlanCard: React.FC<PlanProps & { onSelect?: () => void; isActive?: boolean
 
   return (
     <div 
-      className={`rounded-[3.5rem] p-10 flex flex-col relative group cursor-pointer transition-all duration-700 overflow-hidden border ${isActive ? 'scale-95 border-white' : 'border-white/10 hover:border-white/40'} ${getGlowClass()} ${isUsed ? 'opacity-50 grayscale' : ''}`}
-      onClick={(isActive || isUsed) ? undefined : onSelect}
+      className={`rounded-[3.5rem] p-10 flex flex-col relative group transition-all duration-700 overflow-hidden border ${isActive ? 'scale-95 border-white' : 'border-white/10 hover:border-white/40'} ${getGlowClass()} ${isUsed ? 'opacity-50 grayscale' : ''}`}
+      onClick={(isActive || isUsed || isSoldOut) ? undefined : onSelect}
       style={{ 
         background: isActive ? '#000' : 'linear-gradient(160deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0.01) 100%)'
       }}
@@ -69,30 +77,30 @@ const PlanCard: React.FC<PlanProps & { onSelect?: () => void; isActive?: boolean
       <div className="absolute inset-0 bg-gradient-to-br from-white/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none"></div>
       
       {badge && (
-        <div className={`absolute top-8 left-8 px-6 py-2 rounded-full text-[10px] font-black uppercase tracking-widest z-20 flex items-center gap-2 shadow-lg ${tier === 'gift' ? 'bg-gradient-to-r from-red-600 via-blue-600 to-white text-black' : ''}`} style={tier === 'gift' ? {} : { background: glowColor, color: '#fff' }}>
+        <div className={`absolute top-8 left-8 px-6 py-2 rounded-full text-[10px] font-black uppercase tracking-widest z-20 flex items-center gap-2 shadow-lg ${isSoldOut ? 'bg-slate-700 text-slate-300' : ''}`} style={isSoldOut ? {} : { background: glowColor, color: '#fff' }}>
            {badge}
         </div>
       )}
       
-      <div className={`w-28 h-28 rounded-[3rem] mb-10 flex items-center justify-center text-6xl border border-white/10 relative z-10 bg-white/5 shadow-inner ${tier === 'gift' ? 'gold-center-icon' : ''}`}>
+      <div className={`w-28 h-28 rounded-[3rem] mb-10 flex items-center justify-center text-6xl border border-white/10 relative z-10 bg-white/5 shadow-inner ${isSoldOut ? 'opacity-40' : ''}`}>
         {icon}
       </div>
       
       <div className="mb-6">
         <h3 className="text-4xl font-black text-white">{title}</h3>
-        <p className="text-sm font-black uppercase tracking-[0.25em] mt-1" style={{ color: glowColor }}>{quota}</p>
+        <p className="text-sm font-black uppercase tracking-[0.25em] mt-1" style={{ color: isSoldOut ? '#64748b' : glowColor }}>{quota}</p>
       </div>
       
       <div className="flex items-baseline gap-3 mb-10">
-        <span className="text-xl font-bold text-slate-400">{tier === 'gift' ? '' : 'SDG'}</span>
+        <span className="text-xl font-bold text-slate-400">{isSoldOut ? '' : 'SDG'}</span>
         <span className="text-6xl font-black text-white tracking-tighter drop-shadow-2xl">{price}</span>
       </div>
       
       <div className="flex-1 space-y-6 mb-12">
         {features.map((f, i) => (
           <div key={i} className="flex gap-4 text-base text-slate-300 font-bold group-hover:text-white transition-colors">
-            <div className="w-7 h-7 rounded-full flex items-center justify-center shrink-0 border border-white/10" style={{ background: `${glowColor}22` }}>
-              <span style={{ color: glowColor }}>✓</span>
+            <div className="w-7 h-7 rounded-full flex items-center justify-center shrink-0 border border-white/10" style={{ background: isSoldOut ? '#334155' : `${glowColor}22` }}>
+              <span style={{ color: isSoldOut ? '#94a3b8' : glowColor }}>{isSoldOut ? '×' : '✓'}</span>
             </div>
             {f}
           </div>
@@ -100,13 +108,14 @@ const PlanCard: React.FC<PlanProps & { onSelect?: () => void; isActive?: boolean
       </div>
       
       <button 
-        className={`w-full py-6 rounded-3xl font-black text-xl transition-all relative overflow-hidden ${isActive || isUsed ? 'bg-white/10 text-slate-500' : 'text-white hover:scale-[1.04] active:scale-95 shadow-[0_15px_30px_rgba(0,0,0,0.3)]'}`}
+        disabled={isSoldOut}
+        className={`w-full py-6 rounded-3xl font-black text-xl transition-all relative overflow-hidden ${isSoldOut ? 'bg-slate-800 text-slate-500 cursor-not-allowed' : (isActive || isUsed ? 'bg-white/10 text-slate-500' : 'text-white hover:scale-[1.04] active:scale-95 shadow-[0_15px_30px_rgba(0,0,0,0.3)]')}`}
         style={{ 
-          background: (isActive || isUsed) ? undefined : (tier === 'gift' ? 'linear-gradient(135deg, #ff0000, #0000ff)' : `linear-gradient(135deg, ${glowColor}, ${glowColor}dd)`)
+          background: (isSoldOut || isActive || isUsed) ? undefined : `linear-gradient(135deg, ${glowColor}, ${glowColor}dd)`
         }}
       >
-        <span className="relative z-10">
-          {isActive ? 'الباقة الحالية' : isUsed ? 'تم الحجز' : (tier === 'gift' ? 'حجز مكاني الآن' : 'تفعيل الآن')}
+        <span className="relative z-10 text-center">
+          {isSoldOut ? 'لقد اكتمل الحجز عليك الاشتراك' : (isActive ? 'الباقة الحالية' : isUsed ? 'تم الحجز' : 'تفعيل الآن')}
         </span>
       </button>
     </div>
@@ -120,33 +129,9 @@ interface SubscriptionPlansProps {
 
 const SubscriptionPlans: React.FC<SubscriptionPlansProps> = ({ onActivate, activatedPlanTitle }) => {
   const [selectedPlan, setSelectedPlan] = useState<PlanProps | null>(null);
-  const [step, setStep] = useState<'confirm' | 'payment' | 'activation' | 'success' | 'pre_reg' | 'pre_reg_success'>('confirm');
+  const [step, setStep] = useState<'confirm' | 'payment' | 'activation' | 'success'>('confirm');
   const [activationCode, setActivationCode] = useState('');
-  const [userName, setUserName] = useState('');
   const [error, setError] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [isGiftUsed, setIsGiftUsed] = useState(false);
-
-  useEffect(() => {
-    setIsGiftUsed(localStorage.getItem('gift_plan_used') === 'true');
-  }, []);
-
-  const handlePreRegSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!userName.trim()) { setError('يرجى كتابة اسمك للمتابعة'); return; }
-    
-    setLoading(true);
-    const tgMessage = encodeURIComponent(`مرحباً مازن، أنا ${userName.trim()} وأرغب في الحصول على كود التفعيل المجاني لهدية المنصة.`);
-    const telegramUrl = `https://t.me/+249116158407?text=${tgMessage}`;
-
-    setTimeout(() => {
-      window.open(telegramUrl, '_blank');
-      localStorage.setItem('gift_plan_used', 'true');
-      setIsGiftUsed(true);
-      setStep('pre_reg_success');
-      setLoading(false);
-    }, 1200);
-  };
 
   const handleSendToTelegram = () => {
     if (!selectedPlan) return;
@@ -181,8 +166,8 @@ const SubscriptionPlans: React.FC<SubscriptionPlansProps> = ({ onActivate, activ
   return (
     <div id="pricing" className="space-y-16 pb-20">
       <div className="flex justify-center flex-col items-center gap-6">
-         <div className="px-6 py-2 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 font-bold text-sm animate-pulse">
-            تبقي عدد محدود من المقاعد المجانية للأوائل
+         <div className="px-6 py-2 rounded-full bg-rose-500/10 border border-rose-500/20 text-rose-400 font-bold text-sm">
+            نعتذر، اكتمل عدد الحجوزات المجانية للأوائل (250/250)
          </div>
          
          <div className="flex flex-col items-center gap-4">
@@ -205,17 +190,17 @@ const SubscriptionPlans: React.FC<SubscriptionPlansProps> = ({ onActivate, activ
             key={i} 
             {...p} 
             onSelect={() => { 
-              setSelectedPlan(p); 
-              if (p.tier === 'gift') setStep('pre_reg');
-              else setStep('confirm');
+              if (!p.isSoldOut) {
+                setSelectedPlan(p); 
+                setStep('confirm');
+              }
             }} 
             isActive={activatedPlanTitle === p.title}
-            isUsed={p.tier === 'gift' && isGiftUsed}
           />
         ))}
       </div>
 
-      {selectedPlan && (
+      {selectedPlan && selectedPlan.title && (
         <div className="fixed inset-0 z-[150] flex items-center justify-center p-4 bg-black/95 backdrop-blur-3xl animate-in fade-in duration-500" dir="rtl">
           <div className="w-full h-full max-w-2xl max-h-[90vh] rounded-[3rem] shadow-2xl relative overflow-hidden flex flex-col bg-white">
             
@@ -231,7 +216,7 @@ const SubscriptionPlans: React.FC<SubscriptionPlansProps> = ({ onActivate, activ
                    <p className="text-white/80 font-bold">بيانات حساب المستفيد المعتمدة</p>
                 </div>
 
-                <div className="p-10 flex-1 space-y-8 overflow-y-auto">
+                <div className="p-10 flex-1 space-y-8 overflow-y-auto text-right">
                    <div className="space-y-6">
                       <div className="flex justify-between items-center p-5 bg-slate-50 rounded-2xl border border-slate-100">
                          <span className="text-slate-500 font-bold">اسم المستفيد</span>
@@ -242,8 +227,8 @@ const SubscriptionPlans: React.FC<SubscriptionPlansProps> = ({ onActivate, activ
                          <span className="text-[#cc0000] font-black text-3xl tracking-widest">7928440</span>
                       </div>
                       <div className="flex justify-between items-center p-5 bg-slate-50 rounded-2xl border border-slate-100">
-                         <span className="text-slate-500 font-bold">حساب الدفع</span>
-                         <span className="text-[#cc0000] font-black text-2xl tracking-widest">تليجرام المطور</span>
+                         <span className="text-slate-500 font-bold">رقم الهاتف</span>
+                         <span className="text-[#cc0000] font-black text-2xl tracking-widest">0116158407</span>
                       </div>
                    </div>
 
@@ -285,16 +270,12 @@ const SubscriptionPlans: React.FC<SubscriptionPlansProps> = ({ onActivate, activ
                     </button>
 
                     <div className="space-y-4 pt-4">
-                       <div className="p-5 bg-white border border-slate-200 rounded-2xl text-center">
-                          <p className="text-slate-500 text-sm font-bold">بمجرد استلامنا للإشعار، سنقوم بإرسال كود التفعيل لك فوراً.</p>
-                       </div>
-                       
                        <label className="text-xs font-black text-slate-500 uppercase tracking-widest px-2">هل استلمت كود التفعيل؟</label>
                        <input 
                          type="text"
                          value={activationCode}
                          onChange={e => setActivationCode(e.target.value)}
-                         placeholder="أدخل كود التفعيل هنا لتفعيل الباقة"
+                         placeholder="أدخل كود التفعيل هنا"
                          className="w-full bg-white border border-slate-200 rounded-2xl py-5 px-6 text-slate-900 font-bold outline-none focus:border-[#cc0000] transition-all text-center text-xl"
                        />
                     </div>
@@ -307,52 +288,6 @@ const SubscriptionPlans: React.FC<SubscriptionPlansProps> = ({ onActivate, activ
                        تفعيل الباقة الآن
                     </button>
                  </div>
-              </div>
-            ) : step === 'pre_reg' ? (
-              <div className="flex flex-col h-full bg-[#050510]">
-                <div className="p-16 flex flex-col items-center justify-center h-full space-y-12">
-                  <div className="w-40 h-40 rounded-[3rem] bg-indigo-600/20 border border-indigo-500/30 flex items-center justify-center text-8xl animate-royal-glow gold-center-icon">🎁</div>
-                  <div className="text-center space-y-4">
-                     <h3 className="text-5xl font-black text-white">تسجيل مسبق (هدية)</h3>
-                     <p className="text-slate-500 text-2xl font-bold">باقي 250 مقعداً فقط للمطالبة بالكود</p>
-                  </div>
-                  <form onSubmit={handlePreRegSubmit} className="w-full max-w-md space-y-6">
-                    <input 
-                        type="text" 
-                        value={userName} 
-                        onChange={e => setUserName(e.target.value)} 
-                        placeholder="اكتب اسمك هنا" 
-                        className="w-full bg-white/5 border-2 border-white/10 rounded-[2rem] py-8 text-center text-white font-black text-2xl outline-none focus:border-amber-500 transition-all" 
-                    />
-                    <button 
-                        type="submit"
-                        disabled={loading}
-                        className="w-full py-8 bg-sky-600 text-white font-black rounded-[2rem] text-3xl shadow-2xl hover:scale-[1.03] active:scale-95 transition-all flex items-center justify-center gap-4"
-                    >
-                      {loading ? 'جاري التحويل...' : 'حجز مكاني الآن'}
-                      {!loading && (
-                        <svg className="w-8 h-8" fill="currentColor" viewBox="0 0 24 24">
-                          <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm4.64 6.8c-.15 1.58-.8 5.42-1.13 7.19-.14.75-.42 1-.68 1.03-.58.05-1.02-.38-1.58-.75-.88-.58-1.38-.94-2.23-1.5-.99-.65-.35-1.01.22-1.59.15-.15 2.71-2.48 2.76-2.69.01-.03.01-.14-.07-.2-.08-.06-.19-.04-.27-.02-.11.02-1.85 1.18-5.23 3.46-.49.34-.94.5-1.34.49-.44-.01-1.28-.24-1.9-.45-.77-.25-1.38-.39-1.33-.82.03-.22.32-.45.89-.69 3.48-1.51 5.8-2.51 6.96-2.99 3.31-1.37 3.99-1.61 4.45-1.62.1 0 .32.03.46.14.12.09.15.22.17.31.02.09.03.27.02.43z"/>
-                        </svg>
-                      )}
-                    </button>
-                  </form>
-                  {error && <p className="text-red-500 font-bold">{error}</p>}
-                </div>
-              </div>
-            ) : step === 'pre_reg_success' ? (
-              <div className="flex flex-col h-full p-16 bg-[#050510] items-center justify-center text-center space-y-12">
-                <div className="w-32 h-32 bg-amber-500 rounded-full flex items-center justify-center mx-auto text-white text-6xl shadow-[0_0_50px_rgba(245,158,11,0.4)] animate-bounce-gentle">✓</div>
-                <div className="space-y-6">
-                   <h3 className="text-5xl font-black text-white">تم حجز مكانك بنجاح!</h3>
-                   <div className="p-8 bg-white/5 border border-white/10 rounded-[3rem] space-y-4">
-                      <p className="text-3xl text-amber-400 font-black italic">ستفتح المنصة بعد 5 أيام</p>
-                      <p className="text-2xl text-white font-bold">الموعد: 30 يناير القادم</p>
-                      <hr className="border-white/10" />
-                      <p className="text-slate-400 text-lg">يرجى طلب كود التفعيل المجاني عبر رسالة التليجرام التي أرسلتها الآن.</p>
-                   </div>
-                </div>
-                <button onClick={closeOverlay} className="w-full max-w-md py-6 bg-white text-black font-black rounded-[2rem] text-2xl hover:bg-slate-200 transition-all shadow-2xl">فهمت، سأنتظر الافتتاح</button>
               </div>
             ) : step === 'activation' ? (
               <div className="flex flex-col h-full bg-[#050510] p-16 items-center justify-center space-y-16">

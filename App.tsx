@@ -5,7 +5,7 @@ import ChartAnalyzer from './components/ChartAnalyzer';
 import { UserProfileData, AnalysisResult, PlanTheme, HistoryEntry } from './types';
 import { GRADIENTS } from './components/SettingsModal';
 
-// Lazy loading components for better LCP and bundle size
+// Lazy loading components
 const SubscriptionPlans = lazy(() => import('./components/SubscriptionPlans'));
 const SettingsModal = lazy(() => import('./components/SettingsModal'));
 const VisitorStats = lazy(() => import('./components/VisitorStats'));
@@ -16,7 +16,6 @@ const UserProfile = lazy(() => import('./components/UserProfile'));
 const DonationModal = lazy(() => import('./components/DonationModal'));
 const DeveloperStory = lazy(() => import('./components/DeveloperStory'));
 
-// Elegant loading placeholder
 const SectionLoader = () => (
   <div className="w-full py-20 flex flex-col items-center justify-center space-y-4">
     <div className="w-12 h-12 border-4 border-indigo-500/20 border-t-indigo-500 rounded-full animate-spin"></div>
@@ -54,7 +53,6 @@ const App: React.FC = () => {
     localStorage.setItem('user_profile_v1', JSON.stringify(profile));
   }, [profile]);
 
-  // Handle dynamic background changes
   useEffect(() => {
     const bgElement = document.querySelector('.ambient-bg') as HTMLElement;
     if (bgElement) {
@@ -109,7 +107,6 @@ const App: React.FC = () => {
       <main className="flex-1 pt-32 pb-20 px-4">
         <div className="max-w-7xl mx-auto space-y-24">
           
-          {/* Hero Section */}
           <section className="text-center space-y-8 py-10">
             <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-white/5 border border-white/10 text-indigo-300 text-[10px] font-black uppercase tracking-widest animate-in fade-in slide-in-from-top-4 duration-1000">
                <span className="w-2 h-2 rounded-full bg-indigo-500 animate-pulse"></span>
@@ -123,7 +120,6 @@ const App: React.FC = () => {
             </p>
           </section>
 
-          {/* Core App Grid */}
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
              <div className="lg:col-span-8 space-y-8">
                 <ChartAnalyzer 
@@ -155,7 +151,6 @@ const App: React.FC = () => {
              </div>
           </div>
 
-          {/* Lazy loaded secondary sections */}
           <Suspense fallback={<SectionLoader />}>
             <DeveloperStory />
           </Suspense>

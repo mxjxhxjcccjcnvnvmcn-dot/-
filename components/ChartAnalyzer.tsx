@@ -1,8 +1,7 @@
 
 import React, { useState, useRef } from 'react';
 import { analyzeChartImage } from '../services/geminiService';
-import { AnalysisResult, SignalType } from '../types';
-import { PlanTheme } from './SubscriptionPlans';
+import { AnalysisResult, SignalType, PlanTheme } from '../types';
 
 interface ChartAnalyzerProps {
   isLocked?: boolean;
@@ -13,6 +12,16 @@ interface ChartAnalyzerProps {
   onAnalysisComplete?: (result: AnalysisResult) => void;
   onOpenDonation?: () => void;
 }
+
+const TIMEFRAMES = [
+  { id: '1m', label: '1 دقيقة' },
+  { id: '5m', label: '5 دقائق' },
+  { id: '15m', label: '15 دقيقة' },
+  { id: '1h', label: 'ساعة' },
+  { id: '4h', label: '4 ساعات' },
+  { id: '1d', label: 'يوم' },
+  { id: '1w', label: 'أسبوع' },
+];
 
 const ChartAnalyzer: React.FC<ChartAnalyzerProps> = ({ 
   isLocked = false, 
@@ -27,6 +36,7 @@ const ChartAnalyzer: React.FC<ChartAnalyzerProps> = ({
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<AnalysisResult | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [selectedTimeframe, setSelectedTimeframe] = useState('1h');
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const startAnalysis = async () => {
@@ -40,13 +50,14 @@ const ChartAnalyzer: React.FC<ChartAnalyzerProps> = ({
     setError(null);
     try {
       const base64Data = image.split(',')[1];
-      const analysis = await analyzeChartImage(base64Data);
+      const analysis = await analyzeChartImage(base64Data, selectedTimeframe);
       setResult(analysis);
       if (onDecrementQuota) onDecrementQuota();
       if (onAnalysisComplete) onAnalysisComplete(analysis);
       window.dispatchEvent(new CustomEvent('scan-completed'));
-    } catch (err) {
-      setError("فشل الاتصال بمحرك الذكاء الاصطناعي. تأكد من جودة الصورة.");
+    } catch (err: any) {
+      setError("فشل الاتصال بمحرك الذكاء الاصطناعي. تأكد من جودة الصورة أو جرب مرة أخرى.");
+      console.error(err);
     } finally {
       setLoading(false);
     }
@@ -62,7 +73,8 @@ const ChartAnalyzer: React.FC<ChartAnalyzerProps> = ({
           icon: '🥇', 
           label: 'الباقة الذهبية', 
           desc: 'تحليل فائق السرعة + كشف الحيتان',
-          glowClass: 'animate-gold-halo'
+          glowClass: 'animate-gold-halo',
+          chipActive: 'bg-amber-500 text-black'
         };
       case 'بلاتيني': 
         return { 
@@ -72,7 +84,8 @@ const ChartAnalyzer: React.FC<ChartAnalyzerProps> = ({
           icon: '💎', 
           label: 'الباقة البلاتينية', 
           desc: 'أولوية قصوى + تحليل لحظي',
-          glowClass: 'animate-liquid-glow-platinum'
+          glowClass: 'animate-liquid-glow-platinum',
+          chipActive: 'bg-indigo-500 text-white'
         };
       case 'فضي': 
         return { 
@@ -82,7 +95,8 @@ const ChartAnalyzer: React.FC<ChartAnalyzerProps> = ({
           icon: '🥈', 
           label: 'الباقة الفضية', 
           desc: 'تحليل سريع: 25 صورة يومياً',
-          glowClass: 'animate-silver-pulse-glow'
+          glowClass: 'animate-silver-pulse-glow',
+          chipActive: 'bg-slate-400 text-black'
         };
       case 'هدية المنصة':
         return {
@@ -92,17 +106,19 @@ const ChartAnalyzer: React.FC<ChartAnalyzerProps> = ({
           icon: '🎁',
           label: 'هدية المنصة',
           desc: 'باقة الحجز المسبق',
-          glowClass: 'animate-royal-glow'
+          glowClass: 'animate-royal-glow',
+          chipActive: 'bg-white text-black'
         };
       default: 
         return { 
           accent: 'text-indigo-400', 
           border: 'border-white/10', 
-          bg: 'bg-indigo-600', 
+          bg: 'from-indigo-600 to-indigo-700', 
           icon: '👤', 
           label: 'خطة مجانية', 
           desc: 'اشترك للتحليل فائق السرعة',
-          glowClass: ''
+          glowClass: '',
+          chipActive: 'bg-indigo-600 text-white'
         };
     }
   };
@@ -133,8 +149,6 @@ const ChartAnalyzer: React.FC<ChartAnalyzerProps> = ({
 
         {isLocked && (
           <div className="absolute inset-0 z-50 flex flex-col items-center justify-center bg-black/80 backdrop-blur-md p-6">
-            
-            {/* Donation Option inside Locked Overlay */}
             <div className="mb-8 w-full max-w-xs animate-in slide-in-from-top-4 duration-700 delay-300">
                <button 
                 onClick={onOpenDonation}
@@ -177,6 +191,27 @@ const ChartAnalyzer: React.FC<ChartAnalyzerProps> = ({
 
           <input type="file" ref={fileInputRef} onChange={e => { const f = e.target.files?.[0]; if (f) { const r = new FileReader(); r.readAsDataURL(f); r.onload = () => setImage(r.result as string); } }} className="hidden" accept="image/*" />
 
+          {!isLocked && (
+            <div className="space-y-4">
+              <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest px-2">الفريم الزمني للشارت (Timeframe)</label>
+              <div className="flex flex-wrap gap-2">
+                {TIMEFRAMES.map((tf) => (
+                  <button
+                    key={tf.id}
+                    onClick={() => setSelectedTimeframe(tf.id)}
+                    className={`px-4 py-2 rounded-xl text-xs font-black transition-all border ${
+                      selectedTimeframe === tf.id 
+                        ? `${styles.chipActive} border-transparent shadow-lg scale-105` 
+                        : 'bg-white/5 border-white/10 text-slate-400 hover:bg-white/10 hover:border-white/20'
+                    }`}
+                  >
+                    {tf.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
           {!isLocked && activePlan !== 'مجاني' && (
             <div className={`w-full p-6 rounded-[2rem] border bg-black/40 backdrop-blur-xl flex items-center justify-between animate-in zoom-in duration-500 shadow-2xl ${styles.border} ${styles.glowClass}`}>
               <div className="flex items-center gap-5">
@@ -190,7 +225,7 @@ const ChartAnalyzer: React.FC<ChartAnalyzerProps> = ({
               </div>
               <div className="text-left">
                 <span className="block text-[9px] text-slate-500 font-black uppercase tracking-tighter mb-1">الرصيد المتبقي</span>
-                <span className="text-2xl font-black text-white">{quota} <small className="text-[10px] text-slate-400">صورة</small></span>
+                <span className="text-2xl font-black text-white">{quota} <small className="text-[10px] text-slate-400">تحليل</small></span>
               </div>
             </div>
           )}
@@ -204,7 +239,7 @@ const ChartAnalyzer: React.FC<ChartAnalyzerProps> = ({
               <div className="w-6 h-6 border-3 border-white/30 border-t-white rounded-full animate-spin"></div>
             ) : (
                 <React.Fragment>
-                  <span>بدء التحليل الفوري</span>
+                  <span>بدء التحليل الذكي</span>
                   <span className="text-sm">⚡</span>
                 </React.Fragment>
             )}
@@ -219,7 +254,7 @@ const ChartAnalyzer: React.FC<ChartAnalyzerProps> = ({
               
               <div className="flex flex-col md:flex-row justify-between items-center gap-6 mb-8">
                  <div className="text-center md:text-right">
-                    <span className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400 block mb-1">توصية النظام</span>
+                    <span className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400 block mb-1">توصية النظام ({result.timeframe})</span>
                     <h2 className={`text-6xl font-black italic drop-shadow-xl`} style={{ color: result.recommendation === SignalType.BUY ? '#10b981' : (result.recommendation === SignalType.SELL ? '#f43f5e' : '#94a3b8') }}>
                        {result.recommendation === SignalType.BUY ? 'شـــراء' : (result.recommendation === SignalType.SELL ? 'بـيـــع' : 'انـتـظـار')}
                     </h2>
@@ -236,7 +271,7 @@ const ChartAnalyzer: React.FC<ChartAnalyzerProps> = ({
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                  <div className="space-y-4">
-                    <h4 className="text-xs font-black text-indigo-400 uppercase tracking-widest border-b border-white/5 pb-2">الأسباب الفنية (Rule-Based)</h4>
+                    <h4 className="text-xs font-black text-indigo-400 uppercase tracking-widest border-b border-white/5 pb-2">الأسباب الفنية (AI Reasoning)</h4>
                     <ul className="space-y-2">
                        {result.reasoning.map((r, i) => (
                           <li key={i} className="flex gap-2 text-sm text-slate-400">
@@ -246,15 +281,23 @@ const ChartAnalyzer: React.FC<ChartAnalyzerProps> = ({
                     </ul>
                  </div>
                  <div className="space-y-4">
-                    <h4 className="text-xs font-black text-indigo-400 uppercase tracking-widest border-b border-white/5 pb-2">تفاصيل المؤشرات</h4>
+                    <h4 className="text-xs font-black text-indigo-400 uppercase tracking-widest border-b border-white/5 pb-2">تفاصيل المؤشرات والمستويات</h4>
                     <div className="grid grid-cols-2 gap-3">
                        <div className="bg-black/20 p-3 rounded-xl border border-white/5">
-                          <span className="text-[9px] text-slate-500 uppercase block">RSI</span>
-                          <span className="text-white font-bold">{result.indicators.rsi}</span>
+                          <span className="text-[9px] text-slate-500 uppercase block">RSI Status</span>
+                          <span className="text-white font-bold text-xs">{result.indicators.rsi}</span>
                        </div>
                        <div className="bg-black/20 p-3 rounded-xl border border-white/5">
-                          <span className="text-[9px] text-slate-500 uppercase block">Trend</span>
-                          <span className="text-white font-bold text-xs">{result.indicators.movingAverages}</span>
+                          <span className="text-[9px] text-slate-500 uppercase block">Trend Context</span>
+                          <span className="text-white font-bold text-[10px]">{result.indicators.movingAverages}</span>
+                       </div>
+                       <div className="bg-black/20 p-3 rounded-xl border border-white/5">
+                          <span className="text-[9px] text-emerald-500 uppercase block">دعم رئيسي</span>
+                          <span className="text-white font-bold text-xs">{result.supportLevels[0] || "غير محدد"}</span>
+                       </div>
+                       <div className="bg-black/20 p-3 rounded-xl border border-white/5">
+                          <span className="text-[9px] text-rose-500 uppercase block">مقاومة رئيسية</span>
+                          <span className="text-white font-bold text-xs">{result.resistanceLevels[0] || "غير محدد"}</span>
                        </div>
                     </div>
                  </div>
@@ -263,7 +306,7 @@ const ChartAnalyzer: React.FC<ChartAnalyzerProps> = ({
         </div>
       )}
       
-      {error && <div className="p-4 bg-rose-500/10 border border-rose-500/20 text-rose-400 rounded-2xl text-center text-sm font-bold">{error}</div>}
+      {error && <div className="p-4 bg-rose-500/10 border border-rose-500/20 text-rose-400 rounded-2xl text-center text-sm font-bold animate-pulse">{error}</div>}
     </div>
   );
 };

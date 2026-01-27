@@ -19,7 +19,8 @@ export interface AnalysisResult {
     movingAverages?: string;
   };
   summary: string;
-  suggestedDuration: string; // New field for 5s, 15s, 1m
+  suggestedDuration: string; 
+  timeframe?: string;
 }
 
 export interface HistoryEntry extends AnalysisResult {
@@ -43,4 +44,10 @@ export interface MarketData {
   time: string;
   price: number;
   volume: number;
+}
+
+export interface PlanTheme {
+  glowColor: string;
+  color: string;
+  bgGradient: string;
 }

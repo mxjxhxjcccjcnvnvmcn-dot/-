@@ -1,11 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-
-export interface PlanTheme {
-  glowColor: string;
-  color: string;
-  bgGradient: string;
-}
+import { PlanTheme } from '../types';
 
 interface PlanProps {
   title: string;
@@ -141,11 +136,11 @@ const SubscriptionPlans: React.FC<SubscriptionPlansProps> = ({ onActivate, activ
     if (!userName.trim()) { setError('يرجى كتابة اسمك للمتابعة'); return; }
     
     setLoading(true);
-    const waMessage = encodeURIComponent(`مرحباً مازن، أنا ${userName.trim()} وأرغب في الحصول على كود التفعيل المجاني لهدية المنصة.`);
-    const whatsappUrl = `https://wa.me/249116158407?text=${waMessage}`;
+    const tgMessage = encodeURIComponent(`مرحباً مازن، أنا ${userName.trim()} وأرغب في الحصول على كود التفعيل المجاني لهدية المنصة.`);
+    const telegramUrl = `https://t.me/+249116158407?text=${tgMessage}`;
 
     setTimeout(() => {
-      window.open(whatsappUrl, '_blank');
+      window.open(telegramUrl, '_blank');
       localStorage.setItem('gift_plan_used', 'true');
       setIsGiftUsed(true);
       setStep('pre_reg_success');
@@ -153,10 +148,10 @@ const SubscriptionPlans: React.FC<SubscriptionPlansProps> = ({ onActivate, activ
     }, 1200);
   };
 
-  const handleSendToWhatsApp = () => {
+  const handleSendToTelegram = () => {
     if (!selectedPlan) return;
-    const waMessage = encodeURIComponent(`مرحباً مازن، لقد قمت للتو بتحويل مبلغ ${selectedPlan.price} SDG للحصول على الباقة ال${selectedPlan.title}. مرفق إشعار التحويل.`);
-    window.open(`https://wa.me/249116158407?text=${waMessage}`, '_blank');
+    const tgMessage = encodeURIComponent(`مرحباً مازن، لقد قمت للتو بتحويل مبلغ ${selectedPlan.price} SDG للحصول على الباقة ال${selectedPlan.title}. مرفق إشعار التحويل.`);
+    window.open(`https://t.me/+249116158407?text=${tgMessage}`, '_blank');
   };
 
   const handleActivate = () => {
@@ -204,7 +199,7 @@ const SubscriptionPlans: React.FC<SubscriptionPlansProps> = ({ onActivate, activ
          </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 max-w-[1400px] mx-auto px-8">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 max-w-[1400px] mx-auto px-8 text-right" dir="rtl">
         {PLANS_DATA.map((p, i) => (
           <PlanCard 
             key={i} 
@@ -221,7 +216,7 @@ const SubscriptionPlans: React.FC<SubscriptionPlansProps> = ({ onActivate, activ
       </div>
 
       {selectedPlan && (
-        <div className="fixed inset-0 z-[150] flex items-center justify-center p-4 bg-black/95 backdrop-blur-3xl animate-in fade-in duration-500">
+        <div className="fixed inset-0 z-[150] flex items-center justify-center p-4 bg-black/95 backdrop-blur-3xl animate-in fade-in duration-500" dir="rtl">
           <div className="w-full h-full max-w-2xl max-h-[90vh] rounded-[3rem] shadow-2xl relative overflow-hidden flex flex-col bg-white">
             
             <button onClick={closeOverlay} className="absolute top-6 left-6 z-50 p-3 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-600 transition-all shadow-sm">
@@ -230,7 +225,6 @@ const SubscriptionPlans: React.FC<SubscriptionPlansProps> = ({ onActivate, activ
 
             {step === 'confirm' ? (
               <div className="flex flex-col h-full">
-                {/* Bankak Red Header */}
                 <div className="bg-[#cc0000] p-10 text-center text-white space-y-2">
                    <div className="w-20 h-20 bg-white/20 rounded-2xl flex items-center justify-center mx-auto mb-4 text-4xl">🏦</div>
                    <h3 className="text-3xl font-black">تحويل عبر بنكك</h3>
@@ -248,15 +242,15 @@ const SubscriptionPlans: React.FC<SubscriptionPlansProps> = ({ onActivate, activ
                          <span className="text-[#cc0000] font-black text-3xl tracking-widest">7928440</span>
                       </div>
                       <div className="flex justify-between items-center p-5 bg-slate-50 rounded-2xl border border-slate-100">
-                         <span className="text-slate-500 font-bold">رقم الهاتف (للتحويل)</span>
-                         <span className="text-[#cc0000] font-black text-2xl tracking-widest">0116158407</span>
+                         <span className="text-slate-500 font-bold">حساب الدفع</span>
+                         <span className="text-[#cc0000] font-black text-2xl tracking-widest">تليجرام المطور</span>
                       </div>
                    </div>
 
                    <div className="bg-amber-50 p-6 rounded-2xl border border-amber-200 flex items-start gap-4">
                       <span className="text-2xl">💡</span>
                       <p className="text-sm text-amber-800 leading-relaxed font-bold">
-                         قم بتحويل مبلغ <span className="text-[#cc0000] text-lg px-1">{selectedPlan.price} SDG</span> ثم انتقل للخطوة التالية لمراسلتنا عبر الواتساب.
+                         قم بتحويل مبلغ <span className="text-[#cc0000] text-lg px-1">{selectedPlan.price} SDG</span> ثم انتقل للخطوة التالية لمراسلتنا عبر تليجرام.
                       </p>
                    </div>
                 </div>
@@ -271,20 +265,22 @@ const SubscriptionPlans: React.FC<SubscriptionPlansProps> = ({ onActivate, activ
               <div className="flex flex-col h-full bg-slate-50">
                  <div className="bg-white p-8 text-center border-b border-slate-200">
                     <h3 className="text-2xl font-black text-slate-900">تأكيد الاشتراك</h3>
-                    <p className="text-slate-500 text-sm mt-1">إرسال إثبات التحويل عبر الواتساب</p>
+                    <p className="text-slate-500 text-sm mt-1">إرسال إثبات التحويل عبر تليجرام</p>
                  </div>
 
                  <div className="p-8 flex-1 space-y-8 overflow-y-auto">
                     <button 
-                      onClick={handleSendToWhatsApp}
-                      className="w-full py-10 bg-emerald-500 text-white rounded-[2.5rem] flex flex-col items-center justify-center gap-4 hover:bg-emerald-600 transition-all shadow-xl active:scale-95 group"
+                      onClick={handleSendToTelegram}
+                      className="w-full py-10 bg-sky-500 text-white rounded-[2.5rem] flex flex-col items-center justify-center gap-4 hover:bg-sky-600 transition-all shadow-xl active:scale-95 group"
                     >
                       <div className="w-20 h-20 bg-white/20 rounded-full flex items-center justify-center group-hover:scale-110 transition-transform">
-                        <span className="text-5xl">📱</span>
+                        <svg className="w-12 h-12 text-white" fill="currentColor" viewBox="0 0 24 24">
+                          <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm4.64 6.8c-.15 1.58-.8 5.42-1.13 7.19-.14.75-.42 1-.68 1.03-.58.05-1.02-.38-1.58-.75-.88-.58-1.38-.94-2.23-1.5-.99-.65-.35-1.01.22-1.59.15-.15 2.71-2.48 2.76-2.69.01-.03.01-.14-.07-.2-.08-.06-.19-.04-.27-.02-.11.02-1.85 1.18-5.23 3.46-.49.34-.94.5-1.34.49-.44-.01-1.28-.24-1.9-.45-.77-.25-1.38-.39-1.33-.82.03-.22.32-.45.89-.69 3.48-1.51 5.8-2.51 6.96-2.99 3.31-1.37 3.99-1.61 4.45-1.62.1 0 .32.03.46.14.12.09.15.22.17.31.02.09.03.27.02.43z"/>
+                        </svg>
                       </div>
                       <div className="text-center">
-                        <p className="text-2xl font-black">إرسال الإشعار للواتساب</p>
-                        <p className="text-white/80 text-sm mt-1">اضغط هنا لفتح المحادثة وإرسال الصورة</p>
+                        <p className="text-2xl font-black">إرسال الإشعار للتليجرام</p>
+                        <p className="text-white/80 text-sm mt-1">فتح محادثة الدعم الفني والمراسلة</p>
                       </div>
                     </button>
 
@@ -331,8 +327,15 @@ const SubscriptionPlans: React.FC<SubscriptionPlansProps> = ({ onActivate, activ
                     <button 
                         type="submit"
                         disabled={loading}
-                        className="w-full py-8 bg-gradient-to-r from-red-600 via-blue-600 to-white text-black font-black rounded-[2rem] text-3xl shadow-2xl hover:scale-[1.03] active:scale-95 transition-all"
-                    >{loading ? 'جاري التحويل للواتساب...' : 'حجز مكاني الآن'}</button>
+                        className="w-full py-8 bg-sky-600 text-white font-black rounded-[2rem] text-3xl shadow-2xl hover:scale-[1.03] active:scale-95 transition-all flex items-center justify-center gap-4"
+                    >
+                      {loading ? 'جاري التحويل...' : 'حجز مكاني الآن'}
+                      {!loading && (
+                        <svg className="w-8 h-8" fill="currentColor" viewBox="0 0 24 24">
+                          <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm4.64 6.8c-.15 1.58-.8 5.42-1.13 7.19-.14.75-.42 1-.68 1.03-.58.05-1.02-.38-1.58-.75-.88-.58-1.38-.94-2.23-1.5-.99-.65-.35-1.01.22-1.59.15-.15 2.71-2.48 2.76-2.69.01-.03.01-.14-.07-.2-.08-.06-.19-.04-.27-.02-.11.02-1.85 1.18-5.23 3.46-.49.34-.94.5-1.34.49-.44-.01-1.28-.24-1.9-.45-.77-.25-1.38-.39-1.33-.82.03-.22.32-.45.89-.69 3.48-1.51 5.8-2.51 6.96-2.99 3.31-1.37 3.99-1.61 4.45-1.62.1 0 .32.03.46.14.12.09.15.22.17.31.02.09.03.27.02.43z"/>
+                        </svg>
+                      )}
+                    </button>
                   </form>
                   {error && <p className="text-red-500 font-bold">{error}</p>}
                 </div>
@@ -346,7 +349,7 @@ const SubscriptionPlans: React.FC<SubscriptionPlansProps> = ({ onActivate, activ
                       <p className="text-3xl text-amber-400 font-black italic">ستفتح المنصة بعد 5 أيام</p>
                       <p className="text-2xl text-white font-bold">الموعد: 30 يناير القادم</p>
                       <hr className="border-white/10" />
-                      <p className="text-slate-400 text-lg">يرجى طلب كود التفعيل المجاني عبر رسالة الواتساب التي أرسلتها الآن.</p>
+                      <p className="text-slate-400 text-lg">يرجى طلب كود التفعيل المجاني عبر رسالة التليجرام التي أرسلتها الآن.</p>
                    </div>
                 </div>
                 <button onClick={closeOverlay} className="w-full max-w-md py-6 bg-white text-black font-black rounded-[2rem] text-2xl hover:bg-slate-200 transition-all shadow-2xl">فهمت، سأنتظر الافتتاح</button>
@@ -369,7 +372,7 @@ const SubscriptionPlans: React.FC<SubscriptionPlansProps> = ({ onActivate, activ
                    <div className="w-32 h-32 bg-emerald-500 rounded-full flex items-center justify-center mx-auto mb-6 text-white text-6xl shadow-2xl animate-bounce-gentle">✓</div>
                    <h3 className="text-5xl font-black text-slate-900">تم التفعيل</h3>
                    <p className="text-slate-500 text-xl">باقتك جاهزة الآن للاستخدام</p>
-                   <button onClick={closeOverlay} className="w-full py-8 bg-slate-900 text-white font-black rounded-[2.5rem] text-3xl shadow-2xl hover:scale-[1.02] transition-all">دخول للنظام</button>
+                   <button onClick={closeOverlay} className="w-full py-8 bg-slate-900 text-white font-black rounded-[2.5rem] text-3xl shadow-2xl hover:scale-102 transition-all">دخول للنظام</button>
                 </div>
               </div>
             )}

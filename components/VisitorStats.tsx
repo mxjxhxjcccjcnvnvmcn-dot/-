@@ -50,9 +50,12 @@ const VisitorStats: React.FC = () => {
       {/* Developer Credit Footer */}
       <div className="text-center space-y-4 animate-in fade-in duration-1000">
         <div className="flex items-center justify-center gap-4">
-           <a href="https://wa.me/249116158407" target="_blank" rel="noreferrer" className="px-6 py-2 bg-emerald-600/10 border border-emerald-600/20 rounded-full text-emerald-400 text-xs font-black flex items-center gap-2 hover:bg-emerald-600/20 transition-all">
-             <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-             تواصل عبر الواتساب: 0116158407
+           <a href="https://t.me/+249116158407" target="_blank" rel="noreferrer" className="px-6 py-3 bg-sky-600/10 border border-sky-600/20 rounded-full text-sky-400 text-xs font-black flex items-center gap-3 hover:bg-sky-600/20 transition-all">
+             <span className="w-2 h-2 rounded-full bg-sky-500 animate-pulse"></span>
+             <span>تواصل عبر تليجرام</span>
+             <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+               <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm4.64 6.8c-.15 1.58-.8 5.42-1.13 7.19-.14.75-.42 1-.68 1.03-.58.05-1.02-.38-1.58-.75-.88-.58-1.38-.94-2.23-1.5-.99-.65-.35-1.01.22-1.59.15-.15 2.71-2.48 2.76-2.69.01-.03.01-.14-.07-.2-.08-.06-.19-.04-.27-.02-.11.02-1.85 1.18-5.23 3.46-.49.34-.94.5-1.34.49-.44-.01-1.28-.24-1.9-.45-.77-.25-1.38-.39-1.33-.82.03-.22.32-.45.89-.69 3.48-1.51 5.8-2.51 6.96-2.99 3.31-1.37 3.99-1.61 4.45-1.62.1 0 .32.03.46.14.12.09.15.22.17.31.02.09.03.27.02.43z"/>
+             </svg>
            </a>
         </div>
         <p className="text-indigo-400 font-black text-lg tracking-widest uppercase flex items-center justify-center gap-3">

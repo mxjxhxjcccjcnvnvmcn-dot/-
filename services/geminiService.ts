@@ -2,140 +2,101 @@
 import { GoogleGenAI, Type } from "@google/genai";
 import { AnalysisResult, SignalType } from "../types";
 
-// Create client right before use to ensure it has the latest key from context/dialog
-const createAI = () => {
+// وظيفة إنشاء العميل لضمان استخدام أحدث مفتاح API من البيئة
+const createAIClient = () => {
   return new GoogleGenAI({ apiKey: process.env.API_KEY as string });
 };
 
-export const analyzeChartImage = async (base64Image: string): Promise<AnalysisResult> => {
+export const analyzeChartImage = async (base64Image: string, timeframe: string = '1h'): Promise<AnalysisResult> => {
   try {
-    const ai = createAI();
+    const ai = createAIClient();
     
+    const systemInstruction = `
+      أنت خبير تحليل فني محترف (Senior Technical Analyst) متخصص في أسواق المال والعملات الرقمية.
+      مهمتك هي تحليل صورة الشارت المرفقة بدقة متناهية بناءً على:
+      1. نماذج الشموع اليابانية (Price Action).
+      2. خطوط الاتجاه (Trendlines) والقنوات السعرية.
+      3. مستويات الدعم والمقاومة الأفقية (S/R Levels).
+      4. مؤشرات الزخم (RSI, MACD, Stochastic).
+      5. المتوسطات المتحركة (Moving Averages).
+
+      يجب أن يكون تحليلك منطقياً، حذراً، ومهنياً.
+    `;
+
     const prompt = `
-      You are a HIGH-SPEED PROFESSIONAL STOCK TECHNICAL ANALYSIS ENGINE.
-      
-      CRITICAL RULES:
-      - Analyze the chart IMMEDIATELY and provide the most accurate technical reading.
-      - Use professional terminology (Support, Resistance, RSI, MA, Candle Patterns).
-      - Output MUST be valid JSON.
+      قم بتحليل لقطة الشارت هذه لفريم ${timeframe}. 
+      أعطني تقريراً مفصلاً يتضمن:
+      - الاتجاه الحالي (صاعد، هابط، عرضي).
+      - قرار تداول واضح (BUY, SELL, WAIT).
+      - نسبة الثقة في التحليل (من 0 إلى 1).
+      - الأسباب الفنية لهذا القرار (Reasoning).
+      - ملخص تنفيذي للموقف.
+      - أهم مستوى دعم وأهم مستوى مقاومة.
+      - قراءة مؤشر RSI وحالة المتوسطات المتحركة.
 
-      YOUR TASK:
-      1. Trend: Detect Uptrend, Downtrend, or Sideways.
-      2. Key Levels: Identify specific Support and Resistance zones.
-      3. Indicators: Check RSI, Moving Averages, and MACD.
-      4. Price Action: Identify key candle patterns.
-
-      OUTPUT FORMAT (JSON):
-      {
-        "trend": "Detailed trend description",
-        "support_resistance": "Levels found",
-        "indicators_summary": "RSI & MA status",
-        "price_action": "Patterns analysis",
-        "decision": "BUY" | "SELL" | "WAIT",
-        "confidence_score": number (0-1),
-        "risk_level": "Low" | "Medium" | "High",
-        "reasoning": ["point 1", "point 2"],
-        "symbol": "Asset symbol"
-      }
+      يجب أن تكون النتيجة بتنسيق JSON حصرياً كما هو محدد في الـ Schema.
     `;
 
     const response = await ai.models.generateContent({
-      model: 'gemini-3-flash-preview',
-      contents: {
-        parts: [
-          { inlineData: { mimeType: 'image/jpeg', data: base64Image } },
-          { text: prompt }
-        ]
-      },
+      model: 'gemini-3-pro-preview',
+      contents: [
+        {
+          parts: [
+            { inlineData: { mimeType: 'image/jpeg', data: base64Image } },
+            { text: prompt }
+          ]
+        }
+      ],
       config: {
+        systemInstruction,
         responseMimeType: 'application/json',
-        thinkingConfig: { thinkingBudget: 0 },
         responseSchema: {
           type: Type.OBJECT,
           properties: {
             trend: { type: Type.STRING },
-            support_resistance: { type: Type.STRING },
-            indicators_summary: { type: Type.STRING },
-            price_action: { type: Type.STRING },
             decision: { type: Type.STRING, enum: ["BUY", "SELL", "WAIT"] },
-            confidence_score: { type: Type.NUMBER },
-            risk_level: { type: Type.STRING, enum: ["Low", "Medium", "High"] },
+            confidence: { type: Type.NUMBER },
             reasoning: { type: Type.ARRAY, items: { type: Type.STRING } },
-            symbol: { type: Type.STRING }
+            summary: { type: Type.STRING },
+            support: { type: Type.STRING },
+            resistance: { type: Type.STRING },
+            rsi_value: { type: Type.STRING },
+            macd_status: { type: Type.STRING }
           },
-          required: ["trend", "decision", "confidence_score", "reasoning"]
+          required: ["trend", "decision", "confidence", "reasoning", "summary", "support", "resistance"]
         }
       }
     });
 
-    const result = JSON.parse(response.text || '{}');
+    const text = response.text || '{}';
+    const data = JSON.parse(text);
     
-    let rec = SignalType.HOLD;
-    if (result.decision === 'BUY') rec = SignalType.BUY;
-    if (result.decision === 'SELL') rec = SignalType.SELL;
+    let recommendation = SignalType.HOLD;
+    if (data.decision === 'BUY') recommendation = SignalType.BUY;
+    if (data.decision === 'SELL') recommendation = SignalType.SELL;
 
     return {
       isValidChart: true,
-      symbol: result.symbol || "تحليل تقني",
-      recommendation: rec,
-      confidence: result.confidence_score || 0.5,
-      reasoning: result.reasoning || ["تم تطبيق القواعد الفنية السريعة"],
-      summary: `${result.trend}. ${result.price_action}. المخاطرة: ${result.risk_level}.`,
-      supportLevels: [result.support_resistance],
-      resistanceLevels: [],
+      symbol: "تحليل الأصل",
+      recommendation,
+      confidence: data.confidence || 0.5,
+      reasoning: data.reasoning || [],
+      summary: data.summary,
+      supportLevels: [data.support],
+      resistanceLevels: [data.resistance],
       indicators: {
-        rsi: result.indicators_summary,
-        movingAverages: result.trend
+        rsi: data.rsi_value || "غير محدد",
+        macd: data.macd_status || "غير محدد",
+        movingAverages: data.trend
       },
-      suggestedDuration: result.risk_level
+      suggestedDuration: timeframe,
+      timeframe: timeframe
     };
   } catch (error: any) {
-    console.error("Technical Analysis Engine Error:", error);
-    // Handle the case where the entity was not found (invalid/revoked key)
+    console.error("AI Engine Error:", error);
     if (error.message?.includes("Requested entity was not found")) {
-      window.location.reload(); // Refresh to trigger key picker gate again
+      window.location.reload();
     }
     throw error;
   }
-};
-
-export const verifySubscriptionScreenshot = async (base64Image: string): Promise<boolean> => {
-  try {
-    const ai = createAI();
-    const response = await ai.models.generateContent({
-      model: 'gemini-3-flash-preview',
-      contents: {
-        parts: [
-          { inlineData: { mimeType: 'image/jpeg', data: base64Image } },
-          { text: "Identify if this image is a YouTube subscription or a Bankak receipt. Respond ONLY YES/NO." }
-        ]
-      },
-      config: {
-        thinkingConfig: { thinkingBudget: 0 }
-      }
-    });
-    return response.text?.toUpperCase().includes('YES') || false;
-  } catch { return true; }
-};
-
-export type DialectType = 'sudanese' | 'saudi' | 'syrian';
-
-export const getAIResponse = async (history: any[], text: string, dialect: DialectType): Promise<string> => {
-  const instructions = {
-    sudanese: "أنت مازن، خبير تداول سوداني. رد بلهجة سودانية واثقة ومهنية سريعة.",
-    saudi: "أنت مازن، محلل فني سعودي. رد بلهجة سعودية بيضاء سريعة.",
-    syrian: "أنت مازن، خبير أسهم سوري. رد بلهجة شامية مهذبة سريعة."
-  };
-  try {
-    const ai = createAI();
-    const response = await ai.models.generateContent({
-      model: "gemini-3-flash-preview",
-      contents: text,
-      config: { 
-        systemInstruction: instructions[dialect],
-        thinkingConfig: { thinkingBudget: 0 }
-      }
-    });
-    return response.text || "أهلاً بك.";
-  } catch { return "عذراً، المحرك مشغول."; }
 };
